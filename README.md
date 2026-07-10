@@ -6,9 +6,7 @@ OpenLevel is a lightweight, modern web app and CRM designed specifically to be d
 
 ## Demo
 
-[![Watch the Demo](docs/assets/01_dashboard.jpg)](https://github.com/jahfeelautomation/openlevel/raw/master/docs/assets/demo_video.mp4)
-
-*(Click the image above to watch the 1-minute demo video!)*
+![Watch the Demo](docs/assets/demo_video.gif)
 
 ## Screenshots
 
