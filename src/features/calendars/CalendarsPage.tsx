@@ -169,7 +169,6 @@ export function CalendarsPage() {
 
   if (!loc) return <Empty message="Select a sub-account to view calendars." />
   if (status === 'loading') return <PageSpinner />
-  if (status === 'empty') return <Empty message="No calendars yet." />
 
   return (
     <div className="flex h-full min-h-0">
@@ -319,7 +318,19 @@ export function CalendarsPage() {
           </div>
         </header>
 
-        {view === 'month' ? (
+        {calendars.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-500 bg-slate-50">
+            <CalendarDays className="h-12 w-12 text-slate-300" />
+            <div className="text-center">
+              <h3 className="text-sm font-medium text-slate-900">No calendars yet</h3>
+              <p className="mt-1 text-sm text-slate-500">Create your first calendar in the sidebar to start booking appointments.</p>
+            </div>
+            <Button onClick={() => setCreating(true)} className="mt-2">
+              <Plus className="mr-2 h-4 w-4" />
+              New calendar
+            </Button>
+          </div>
+        ) : view === 'month' ? (
           <MonthView appts={filtered} calendars={calById} onStatus={setStatusOf} contactName={contactName} />
         ) : (
           <div className="ol-scroll min-h-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-4 lg:px-6 lg:py-5">
