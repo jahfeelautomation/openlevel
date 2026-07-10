@@ -1,0 +1,15 @@
+node_modules
+dist
+server-dist
+.env
+*.log
+.DS_Store
+.claude/
+
+# The workspace-root .gitignore has a Python-style `lib/` rule (build output)
+# that accidentally swallows our React source dir `src/lib/`. Re-include it.
+!/src/lib/
+.maudit/
+
+# Dry-run output for one-off seed loaders (contains PII — never commit)
+scripts/.out/

@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+
+/* OpenLevel design tokens — a polished GHL-grade look.
+   `brand` is the indigo accent; the shell chrome uses slate. Defining the
+   colors under @theme makes `bg-brand-600`, `text-brand-700`, etc. available
+   as normal Tailwind utilities. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #f1f5f9;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Slim, unobtrusive scrollbars inside app panes. */
+.ol-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.ol-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.ol-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.ol-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
