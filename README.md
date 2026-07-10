@@ -5,7 +5,7 @@
 OpenLevel is a lightweight, modern web app and CRM designed specifically to be driven by AI agents. Instead of fighting with legacy interfaces and massive SaaS subscriptions, OpenLevel gives you the core CRM engine (contacts, pipelines, locations, custom fields) on a modern stack that is actually a joy to use and infinitely customizable.
 
 ## Demo
-<video src="./docs/assets/demo_video.webm" width="800" controls></video>
+<video src="https://raw.githubusercontent.com/jahfeelautomation/openlevel/master/docs/assets/demo_video.webm" width="800" controls></video>
 
 ## Screenshots
 
