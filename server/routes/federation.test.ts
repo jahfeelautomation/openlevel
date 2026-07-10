@@ -170,7 +170,7 @@ function toolUsingClaude(toolName: string, toolInput: Record<string, unknown> = 
   return { client, calls }
 }
 
-const LOC = { id: 'locA', name: 'Jamal Co', slug: 'jamal', client_slug: 'jamal', branding: {}, settings: {} }
+const LOC = { id: 'locA', name: 'Alex Co', slug: 'Alex', client_slug: 'Alex', branding: {}, settings: {} }
 
 type TurnResponseLike = { reply: string; proposals: { ref: string; kind: string; approve: string; summary: string }[] }
 
@@ -298,3 +298,4 @@ test('POST /confirm requires the tenant header and rejects a malformed body', as
   expect((await postJson(harness(db, {}), '/federation/confirm', { nope: true }, { ...auth, ...tenant })).status).toBe(400) // bad shape
   expect((await postJson(harness(db, {}), '/federation/confirm', { proposalRef: 'portal:not-ours' }, { ...auth, ...tenant })).status).toBe(400) // un-decodable ref
 })
+

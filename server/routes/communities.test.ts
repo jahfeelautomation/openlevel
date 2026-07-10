@@ -21,12 +21,12 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   const contact = await new ContactsRepo(db, loc).upsertByMatch(
-    { name: 'Marcus Webb', phone: '+16785550142' },
+    { name: 'Sam Smith', phone: '+16785550142' },
     'seed',
   )
 
@@ -98,7 +98,7 @@ test('GET / lists communities with a derived rollup and an honest zero', async (
   const { app } = await setup()
   const { community } = await createCommunity(app, { name: 'Inner Circle', status: 'published' })
   const general = await addChannel(app, community.id, { name: 'General' })
-  await addMember(app, community.id, { name: 'Coach Jamal', role: 'admin' })
+  await addMember(app, community.id, { name: 'Coach Alex', role: 'admin' })
   await addPost(app, community.id, { channelId: general.channel.id, body: 'Welcome everyone.' })
 
   const res = await jsonReq(app, '/', 'GET')
@@ -118,7 +118,7 @@ test('GET /:id returns the community, channels with post counts, members, posts 
   const { community } = await createCommunity(app, { name: 'Inner Circle', status: 'published' })
   const general = await addChannel(app, community.id, { name: 'General', position: 0 })
   const wins = await addChannel(app, community.id, { name: 'Wins', position: 1 })
-  const jamal = await addMember(app, community.id, { name: 'Coach Jamal', role: 'admin' })
+  const Alex = await addMember(app, community.id, { name: 'Coach Alex', role: 'admin' })
   const dana = await addMember(app, community.id, { name: 'Dana Reed' })
   const pinned = await addPost(app, community.id, {
     channelId: wins.channel.id,
@@ -127,13 +127,13 @@ test('GET /:id returns the community, channels with post counts, members, posts 
     body: 'Down 10 pounds.',
     pinned: true,
   })
-  await addPost(app, community.id, { channelId: general.channel.id, memberId: jamal.member.id, body: 'Welcome.' })
+  await addPost(app, community.id, { channelId: general.channel.id, memberId: Alex.member.id, body: 'Welcome.' })
   // Real engagement on the pinned post: two likes, one comment.
   const likes = new CommunityPostLikesRepo(db, loc)
-  await likes.add(pinned.post.id, jamal.member.id)
+  await likes.add(pinned.post.id, Alex.member.id)
   await likes.add(pinned.post.id, dana.member.id)
   await jsonReq(app, `/${community.id}/posts/${pinned.post.id}/comments`, 'POST', {
-    memberId: jamal.member.id,
+    memberId: Alex.member.id,
     body: 'Proud of you!',
   })
 
@@ -159,7 +159,7 @@ test('GET /:id returns the community, channels with post counts, members, posts 
   expect(body.community.id).toBe(community.id)
   expect(body.channels.map((ch) => ch.name)).toEqual(['General', 'Wins'])
   expect(body.channels.find((ch) => ch.name === 'Wins')?.postCount).toBe(1)
-  expect(body.members.map((m) => m.name)).toContain('Coach Jamal')
+  expect(body.members.map((m) => m.name)).toContain('Coach Alex')
   // pinned post leads, carries its real engagement + the comment thread
   expect(body.posts[0]?.title).toBe('Hit my goal!')
   expect(body.posts[0]?.pinned).toBe(true)
@@ -168,7 +168,7 @@ test('GET /:id returns the community, channels with post counts, members, posts 
   expect(body.posts[0]?.likes).toBe(2)
   expect(body.posts[0]?.comments).toBe(1)
   expect(body.posts[0]?.commentThread[0]?.body).toBe('Proud of you!')
-  expect(body.posts[0]?.commentThread[0]?.authorName).toBe('Coach Jamal')
+  expect(body.posts[0]?.commentThread[0]?.authorName).toBe('Coach Alex')
   // General and Wins each hold one post, so the most-active channel ties — the
   // rollup honestly breaks the tie to the first by position (General).
   expect(body.rollup).toEqual({ members: 2, posts: 2, channelCount: 2, topChannel: 'General' })
@@ -197,9 +197,9 @@ test('DELETE /:id removes the community and cascades channels, members, posts, c
   const { app, db, loc } = await setup()
   const { community } = await createCommunity(app, { name: 'Inner Circle', status: 'published' })
   const general = await addChannel(app, community.id, { name: 'General' })
-  const jamal = await addMember(app, community.id, { name: 'Coach Jamal' })
-  const post = await addPost(app, community.id, { channelId: general.channel.id, memberId: jamal.member.id, body: 'Hi.' })
-  await new CommunityPostLikesRepo(db, loc).add(post.post.id, jamal.member.id)
+  const Alex = await addMember(app, community.id, { name: 'Coach Alex' })
+  const post = await addPost(app, community.id, { channelId: general.channel.id, memberId: Alex.member.id, body: 'Hi.' })
+  await new CommunityPostLikesRepo(db, loc).add(post.post.id, Alex.member.id)
   await jsonReq(app, `/${community.id}/posts/${post.post.id}/comments`, 'POST', { body: 'Nice.' })
 
   const res = await jsonReq(app, `/${community.id}`, 'DELETE')
@@ -328,7 +328,7 @@ test('DELETE /:id/posts/:postId removes a post and cascades its likes + comments
   const { app, db, loc } = await setup()
   const { community } = await createCommunity(app, { name: 'Inner Circle' })
   const ch = await addChannel(app, community.id, { name: 'General' })
-  const member = await addMember(app, community.id, { name: 'Coach Jamal' })
+  const member = await addMember(app, community.id, { name: 'Coach Alex' })
   const post = await addPost(app, community.id, { channelId: ch.channel.id, body: 'Hi.' })
   await new CommunityPostLikesRepo(db, loc).add(post.post.id, member.member.id)
   await jsonReq(app, `/${community.id}/posts/${post.post.id}/comments`, 'POST', { body: 'Nice.' })
@@ -374,3 +374,4 @@ test('the rollup topChannel is DERIVED from real posts, shifting as posts move',
   list = (await (await jsonReq(app, '/', 'GET')).json()) as typeof list
   expect(list.communities.find((x) => x.id === community.id)?.rollup.topChannel).toBe('General')
 })
+

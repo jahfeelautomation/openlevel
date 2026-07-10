@@ -317,7 +317,7 @@ function PostDetailsCard({
             <Input
               id="post-author"
               value={author}
-              placeholder="e.g. Jamal Carter"
+              placeholder="e.g. Alex Mercer"
               onChange={(e) => setAuthor(e.target.value)}
             />
           </div>
@@ -372,3 +372,4 @@ function PostDetailsCard({
     </section>
   )
 }
+

@@ -19,9 +19,9 @@ test('lists every task in the location with a live KPI summary', async () => {
   // Two open + one completed. open/completed are clock-independent, so the test
   // is deterministic regardless of when it runs.
   db.enqueue([
-    { id: 't1', contact_name: 'Marcus Webb', due_at: '2026-06-01T00:00:00Z', completed_at: null },
+    { id: 't1', contact_name: 'Sam Smith', due_at: '2026-06-01T00:00:00Z', completed_at: null },
     { id: 't2', contact_name: 'Dana Cole', due_at: null, completed_at: null },
-    { id: 't3', contact_name: 'Marcus Webb', due_at: null, completed_at: '2026-06-02T00:00:00Z' },
+    { id: 't3', contact_name: 'Sam Smith', due_at: null, completed_at: '2026-06-02T00:00:00Z' },
   ])
 
   const res = await harness(db).request('/')
@@ -52,3 +52,4 @@ test('an empty location is an honest all-zero summary', async () => {
     summary: { open: 0, overdue: 0, dueToday: 0, upcoming: 0, completed: 0 },
   })
 })
+

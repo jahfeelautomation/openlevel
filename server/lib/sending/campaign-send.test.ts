@@ -28,7 +28,7 @@ function contact(over: Partial<Contact> = {}): Contact {
   return {
     id: 'c1',
     location_id: 'locA',
-    name: 'Derek Sull',
+    name: 'Jordan Doe',
     first_name: 'Derek',
     last_name: 'Sull',
     phones: ['+16025550123'],
@@ -111,7 +111,7 @@ describe('sendCampaign: email fan-out', () => {
     expect(email.sendEmail).toHaveBeenCalledTimes(2)
     expect(email.sendEmail.mock.calls[0]?.[0]).toEqual({
       to: 'derek@example.com',
-      toName: 'Derek Sull',
+      toName: 'Jordan Doe',
       subject: 'Offer for Derek',
       text: 'Hi Derek, offer inside.',
     })
@@ -129,11 +129,11 @@ describe('sendCampaign: email fan-out', () => {
       locationId: 'locA',
       campaign: campaign({ subject: null, body: 'From {{custom_values.business_name}}' }),
       contacts: [contact()],
-      customValues: { business_name: 'Jamal Cash Offers' },
+      customValues: { business_name: 'Alex Cash Offers' },
     })
     expect(email.sendEmail.mock.calls[0]?.[0]).toMatchObject({
       subject: 'June blast',
-      text: 'From Jamal Cash Offers',
+      text: 'From Alex Cash Offers',
     })
   })
 
@@ -240,3 +240,4 @@ describe('sendCampaign: failure isolation + throttle', () => {
     expect(d.sleep).toHaveBeenCalledWith(250)
   })
 })
+

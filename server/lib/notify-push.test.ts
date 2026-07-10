@@ -6,7 +6,7 @@ test('POSTs to the gateway with the internal secret header + full body', async (
     source: 'openlevel',
     title: 'New message — Bob',
     body: 'hello',
-    data: { conversationId: 'conv1', locationId: 'locJamal' },
+    data: { conversationId: 'conv1', locationId: 'locAlex' },
   })
   expect(fetchImpl).toHaveBeenCalledWith(
     'http://gw/push/send',
@@ -20,7 +20,7 @@ test('POSTs to the gateway with the internal secret header + full body', async (
     source: 'openlevel',
     title: 'New message — Bob',
     body: 'hello',
-    data: { conversationId: 'conv1', locationId: 'locJamal' },
+    data: { conversationId: 'conv1', locationId: 'locAlex' },
   })
 })
 
@@ -40,3 +40,4 @@ test('is a no-op when url or secret is unset', async () => {
   await notifyPush({ url: '', secret: '', fetchImpl }, { source: 'openlevel', title: 'x', body: 'y' })
   expect(fetchImpl).not.toHaveBeenCalled()
 })
+

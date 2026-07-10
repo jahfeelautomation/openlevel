@@ -183,7 +183,7 @@ export function SendingSettingsPage() {
                     id="from-email"
                     value={form.fromEmail}
                     maxLength={320}
-                    placeholder="offers@jamalbuyshouses.com"
+                    placeholder="offers@acmehomebuyers.com"
                     onChange={(e) => patch({ fromEmail: e.target.value })}
                   />
                 </div>
@@ -196,7 +196,7 @@ export function SendingSettingsPage() {
                     id="from-name"
                     value={form.fromName}
                     maxLength={200}
-                    placeholder="Jamal Buys Houses"
+                    placeholder="Acme Home Buyers"
                     onChange={(e) => patch({ fromName: e.target.value })}
                   />
                 </div>
@@ -332,3 +332,4 @@ function ProviderCard({
     </button>
   )
 }
+

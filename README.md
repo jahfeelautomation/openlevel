@@ -18,9 +18,21 @@ OpenLevel is a lightweight, modern web app and CRM designed specifically to be d
 ## Why OpenLevel?
 If you've ever wanted to build your own "Done-For-You" Ops agency without paying massive white-labeling fees to proprietary software companies, OpenLevel is your starting point. It provides the core plumbing you need to run high-ticket bespoke automation services for your clients.
 
+We use a "One API, Two Clients" pattern:
+- `server/` - The backend API (Hono, SQLite/Postgres, Drizzle ORM).
+- `src/` - The web application SPA (Vite, React, Tailwind).
+- `openconnector/` - The mobile application (Expo, React Native, NativeWind).
+
 * **Multi-Tenant:** Built for agencies. Manage multiple locations/clients easily.
 * **Modern Stack:** Built on React, Tailwind, and Hono.
 * **AI-First:** Native routing for AI Agents (Anthropic, OpenAI) to take actions on behalf of your clients.
+
+### Running the Mobile App (OpenConnector)
+
+1.  Navigate to the app directory:
+    ```bash
+    cd openconnector
+    ```
 
 ## Getting Started
 

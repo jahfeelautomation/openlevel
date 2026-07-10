@@ -19,8 +19,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
 
@@ -154,3 +154,4 @@ test('DELETE /:id is 404 for an unknown post', async () => {
   const { app } = await setup()
   expect((await jsonReq(app, '/nope', 'DELETE')).status).toBe(404)
 })
+

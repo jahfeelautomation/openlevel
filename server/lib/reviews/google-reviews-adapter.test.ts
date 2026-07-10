@@ -15,7 +15,7 @@ describe('google reviews source: fetchReviews', () => {
           reviewId: 'gr_1',
           starRating: 'FIVE',
           comment: 'Fast closing, fair price.',
-          reviewer: { displayName: 'Marcus Webb' },
+          reviewer: { displayName: 'Sam Smith' },
           createTime: '2026-05-30T18:04:00Z',
         },
       ],
@@ -35,7 +35,7 @@ describe('google reviews source: fetchReviews', () => {
         externalId: 'gr_1',
         rating: 5,
         body: 'Fast closing, fair price.',
-        reviewerName: 'Marcus Webb',
+        reviewerName: 'Sam Smith',
         createdAt: '2026-05-30T18:04:00Z',
       },
     ])
@@ -106,3 +106,4 @@ describe('google reviews source: fetchReviews', () => {
     await expect(source.fetchReviews()).rejects.not.toThrow(new RegExp(TOKEN))
   })
 })
+

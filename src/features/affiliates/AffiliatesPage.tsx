@@ -587,7 +587,7 @@ function AddAffiliateDialog({
               id="affiliate-name"
               value={name}
               autoFocus
-              placeholder="e.g. Marcus Webb"
+              placeholder="e.g. Sam Smith"
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void add()
@@ -630,3 +630,4 @@ function AddAffiliateDialog({
     </div>
   )
 }
+

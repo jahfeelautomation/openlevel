@@ -1,7 +1,7 @@
 # OpenLevel Slice 3 — Calendars & Appointments (design)
 
 **Date:** 2026-06-03
-**Status:** building (autonomous; JF directive "work non-stop, whatever you recommend")
+**Status:** building (autonomous; AL directive "work non-stop, whatever you recommend")
 
 ## Goal
 
@@ -86,4 +86,5 @@ cancelled/no_show=amber/slate muted.
 
 `npm run typecheck` (src+server+db) + `npm test` green; `npm run shoot` adds a
 `calendars` board shot; visual GHL-grade confirm; commit with screenshot ref;
-send JF.
+send AL.
+

@@ -46,10 +46,10 @@ test('rejects a request that carries no secret at all with 401', async () => {
 
 test('accepts the secret from the x-webhook-secret header (the non-leaking path)', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ location_id: 'locJamal', inbox_id: '7', config: {} }]) // resolveLocation
-  db.enqueue([{ id: 'c1', location_id: 'locJamal' }]) // contacts upsert (atomic)
-  db.enqueue([{ id: 'conv1', location_id: 'locJamal' }]) // conversations upsert (atomic)
-  db.enqueue([{ id: 'm1', location_id: 'locJamal' }]) // messages insertInbound
+  db.enqueue([{ location_id: 'locAlex', inbox_id: '7', config: {} }]) // resolveLocation
+  db.enqueue([{ id: 'c1', location_id: 'locAlex' }]) // contacts upsert (atomic)
+  db.enqueue([{ id: 'conv1', location_id: 'locAlex' }]) // conversations upsert (atomic)
+  db.enqueue([{ id: 'm1', location_id: 'locAlex' }]) // messages insertInbound
   db.enqueue([{ id: 't1' }]) // timeline add
   db.enqueue([]) // conversations touch
 
@@ -74,10 +74,10 @@ test('ignores non-message events with 200', async () => {
 
 test('ingests inbound: contact + conversation + message + timeline, all location-scoped', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ location_id: 'locJamal', inbox_id: '7', config: {} }]) // resolveLocation
-  db.enqueue([{ id: 'c1', location_id: 'locJamal' }]) // contacts upsert (atomic)
-  db.enqueue([{ id: 'conv1', location_id: 'locJamal' }]) // conversations upsert (atomic)
-  db.enqueue([{ id: 'm1', location_id: 'locJamal' }]) // messages insertInbound
+  db.enqueue([{ location_id: 'locAlex', inbox_id: '7', config: {} }]) // resolveLocation
+  db.enqueue([{ id: 'c1', location_id: 'locAlex' }]) // contacts upsert (atomic)
+  db.enqueue([{ id: 'conv1', location_id: 'locAlex' }]) // conversations upsert (atomic)
+  db.enqueue([{ id: 'm1', location_id: 'locAlex' }]) // messages insertInbound
   db.enqueue([{ id: 't1' }]) // timeline add
   db.enqueue([]) // conversations touch (UPDATE)
 
@@ -88,13 +88,13 @@ test('ingests inbound: contact + conversation + message + timeline, all location
 
   // every query after resolveLocation carried the resolved location id
   for (const call of db.calls.slice(1)) {
-    expect(call.params).toContain('locJamal')
+    expect(call.params).toContain('locAlex')
   }
 })
 
 test('enqueues onInbound after a fresh inbound message', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ location_id: 'locJamal', inbox_id: '7', config: {} }]) // resolveLocation
+  db.enqueue([{ location_id: 'locAlex', inbox_id: '7', config: {} }]) // resolveLocation
   db.enqueue([{ id: 'c1' }]) // contacts upsert
   db.enqueue([{ id: 'conv1' }]) // conversations upsert
   db.enqueue([{ id: 'm1' }]) // messages insertInbound
@@ -111,13 +111,13 @@ test('enqueues onInbound after a fresh inbound message', async () => {
   })
   await post(app, payload)
   expect(seen).toEqual([
-    { locationId: 'locJamal', conversationId: 'conv1', contactId: 'c1', messageId: 'm1', contactName: 'Bob', preview: 'hi' },
+    { locationId: 'locAlex', conversationId: 'conv1', contactId: 'c1', messageId: 'm1', contactName: 'Bob', preview: 'hi' },
   ])
 })
 
 test('dedupes a repeated message (insertInbound conflict) without timeline write', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ location_id: 'locJamal', inbox_id: '7', config: {} }]) // resolveLocation
+  db.enqueue([{ location_id: 'locAlex', inbox_id: '7', config: {} }]) // resolveLocation
   db.enqueue([{ id: 'c1' }]) // contacts upsert
   db.enqueue([{ id: 'conv1' }]) // conversations upsert
   db.enqueue([]) // insertInbound -> conflict -> null
@@ -128,3 +128,4 @@ test('dedupes a repeated message (insertInbound conflict) without timeline write
   expect(await res.json()).toEqual({ ok: true, deduped: true })
   expect(db.calls).toHaveLength(4) // no timeline, no touch
 })
+

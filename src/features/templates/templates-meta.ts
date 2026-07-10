@@ -32,7 +32,7 @@ export interface MergeContact {
 export const SAMPLE_CONTACT: MergeContact = {
   first_name: 'Derek',
   last_name: 'Sull',
-  name: 'Derek Sull',
+  name: 'Jordan Doe',
 }
 
 /** Mirror of server renderTemplate(): substitute known contact tokens and the
@@ -73,3 +73,4 @@ export function channelLabel(channel: string): string {
 }
 
 export const TEMPLATE_CHANNELS: TemplateChannel[] = ['email', 'sms']
+

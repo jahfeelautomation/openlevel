@@ -15,6 +15,7 @@ import { cn, dayKey, formatDayLabel, formatTime } from '../../lib/utils'
 import { useTenant } from '../../state/location'
 import { BookingSettingsDialog } from './BookingSettingsDialog'
 import { NewAppointmentDialog } from './NewAppointmentDialog'
+import { MonthView } from './MonthView'
 import { hostedUrl } from '../trigger-links/link-ui'
 
 // Full static class strings (no interpolation) so Tailwind keeps them on purge.
@@ -82,6 +83,7 @@ export function CalendarsPage() {
   // lands on the agenda (the appointments) rather than a near-empty calendar
   // picker; the back button surfaces the picker. Desktop shows both panes.
   const [agendaOpen, setAgendaOpen] = useState(true)
+  const [view, setView] = useState<'agenda' | 'month'>('month')
 
   useEffect(() => {
     if (!loc) return
@@ -288,6 +290,22 @@ export function CalendarsPage() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center rounded-md border border-slate-200 bg-slate-50 p-1 mr-2 hidden sm:flex">
+              <button
+                type="button"
+                onClick={() => setView('month')}
+                className={cn('rounded px-2.5 py-1 text-xs font-medium transition-colors', view === 'month' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700')}
+              >
+                Month
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('agenda')}
+                className={cn('rounded px-2.5 py-1 text-xs font-medium transition-colors', view === 'agenda' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700')}
+              >
+                Agenda
+              </button>
+            </div>
             {selectedCal && (
               <Button variant="outline" size="sm" onClick={() => setBookingCalId(selectedCal.id)}>
                 <Settings2 className="h-4 w-4" />
@@ -301,35 +319,39 @@ export function CalendarsPage() {
           </div>
         </header>
 
-        <div className="ol-scroll min-h-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-4 lg:px-6 lg:py-5">
-          {filtered.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
-              <CalendarDays className="h-8 w-8" />
-              <p className="text-sm">No upcoming appointments.</p>
-            </div>
-          ) : (
-            <div className="mx-auto max-w-3xl space-y-6">
-              {groups.map((group) => (
-                <section key={group.key}>
-                  <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    {group.label}
-                  </h2>
-                  <div className="space-y-2">
-                    {group.items.map((appt) => (
-                      <AppointmentRow
-                        key={appt.id}
-                        appt={appt}
-                        calendar={calById[appt.calendar_id]}
-                        contactName={contactName(appt)}
-                        onStatus={setStatusOf}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
+        {view === 'month' ? (
+          <MonthView appts={filtered} calendars={calById} onStatus={setStatusOf} contactName={contactName} />
+        ) : (
+          <div className="ol-scroll min-h-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-4 lg:px-6 lg:py-5">
+            {filtered.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                <CalendarDays className="h-8 w-8" />
+                <p className="text-sm">No upcoming appointments.</p>
+              </div>
+            ) : (
+              <div className="mx-auto max-w-3xl space-y-6">
+                {groups.map((group) => (
+                  <section key={group.key}>
+                    <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      {group.label}
+                    </h2>
+                    <div className="space-y-2">
+                      {group.items.map((appt) => (
+                        <AppointmentRow
+                          key={appt.id}
+                          appt={appt}
+                          calendar={calById[appt.calendar_id]}
+                          contactName={contactName(appt)}
+                          onStatus={setStatusOf}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showDialog && (

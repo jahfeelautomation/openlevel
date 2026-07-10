@@ -12,25 +12,25 @@ const idxPost = (over: Partial<Parameters<typeof renderBlogIndex>[0]['posts'][nu
 describe('renderBlogIndex', () => {
   test('is a self-contained, noindex document branded to the location', () => {
     const html = renderBlogIndex({
-      businessName: 'Jamal — Cash Offers',
+      businessName: 'Alex — Cash Offers',
       brandColor: '#0ea5e9',
-      loc: 'loc_jamal',
+      loc: 'loc_alex',
       posts: [idxPost()],
     })
     expect(html.startsWith('<!doctype html>')).toBe(true)
     expect(html).toContain('name="robots" content="noindex"')
     expect(html).toContain('--brand:#0ea5e9')
-    expect(html).toContain('Jamal — Cash Offers')
+    expect(html).toContain('Alex — Cash Offers')
     expect(html).toContain('>Blog<')
   })
 
   test('renders each post as a link to its own public URL with date and derived read time', () => {
     const html = renderBlogIndex({
       businessName: 'Acme',
-      loc: 'loc_jamal',
+      loc: 'loc_alex',
       posts: [idxPost()],
     })
-    expect(html).toContain('href="/api/public/blog/loc_jamal/cash-offers-101"')
+    expect(html).toContain('href="/api/public/blog/loc_alex/cash-offers-101"')
     expect(html).toContain('Cash Offers 101')
     expect(html).toContain('How a cash offer actually works.')
     expect(html).toContain('June 3, 2026')
@@ -40,7 +40,7 @@ describe('renderBlogIndex', () => {
   test('omits the read-time badge for a 0-minute (empty) post rather than printing "0 min read"', () => {
     const html = renderBlogIndex({
       businessName: 'Acme',
-      loc: 'loc_jamal',
+      loc: 'loc_alex',
       posts: [idxPost({ readingMinutes: 0 })],
     })
     expect(html).not.toContain('0 min read')
@@ -49,7 +49,7 @@ describe('renderBlogIndex', () => {
   })
 
   test('an empty blog is an honest empty state, not a fabricated post', () => {
-    const html = renderBlogIndex({ businessName: 'Acme', loc: 'loc_jamal', posts: [] })
+    const html = renderBlogIndex({ businessName: 'Acme', loc: 'loc_alex', posts: [] })
     expect(html).toContain('No posts published yet')
     // No rendered post link (the bare class name still appears in the <style> block).
     expect(html).not.toContain('<a class="ol-postcard"')
@@ -58,7 +58,7 @@ describe('renderBlogIndex', () => {
   test('escapes post titles and excerpts — no HTML injection from content', () => {
     const html = renderBlogIndex({
       businessName: 'Acme',
-      loc: 'loc_jamal',
+      loc: 'loc_alex',
       posts: [idxPost({ title: '<script>alert(1)</script>', excerpt: '<b>hi</b>' })],
     })
     expect(html).not.toContain('<script>alert(1)</script>')
@@ -70,7 +70,7 @@ describe('renderBlogIndex', () => {
     const html = renderBlogIndex({
       businessName: 'Acme',
       brandColor: 'red;}</style><script>',
-      loc: 'loc_jamal',
+      loc: 'loc_alex',
       posts: [],
     })
     expect(html).toContain('--brand:#4f46e5')
@@ -80,13 +80,13 @@ describe('renderBlogIndex', () => {
 
 describe('renderBlogPost', () => {
   const base = {
-    businessName: 'Jamal — Cash Offers',
+    businessName: 'Alex — Cash Offers',
     brandColor: '#0ea5e9',
-    loc: 'loc_jamal',
+    loc: 'loc_alex',
     post: {
       title: 'How We Buy Houses For Cash',
       body: 'First paragraph here.\n\nSecond paragraph here.',
-      author: 'Jamal',
+      author: 'Alex',
       coverImageUrl: 'https://cdn.example.com/cover.jpg',
       publishedAt: '2026-06-03T15:00:00.000Z',
       readingMinutes: 5,
@@ -96,7 +96,7 @@ describe('renderBlogPost', () => {
   test('renders the title, author, date and derived read time', () => {
     const html = renderBlogPost(base)
     expect(html).toContain('How We Buy Houses For Cash')
-    expect(html).toContain('Jamal')
+    expect(html).toContain('Alex')
     expect(html).toContain('June 3, 2026')
     expect(html).toContain('5 min read')
   })
@@ -143,7 +143,7 @@ describe('renderBlogPost', () => {
 
   test('links back to the location blog index', () => {
     const html = renderBlogPost(base)
-    expect(html).toContain('href="/api/public/blog/loc_jamal"')
+    expect(html).toContain('href="/api/public/blog/loc_alex"')
   })
 })
 
@@ -155,3 +155,4 @@ describe('renderBlogNotFound', () => {
     expect(html).toContain('This post is not available.')
   })
 })
+

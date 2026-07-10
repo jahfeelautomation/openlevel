@@ -22,13 +22,13 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
 
   const contact = await new ContactsRepo(db, loc).upsertByMatch(
-    { name: 'Marcus Webb', phone: '+16785550142' },
+    { name: 'Sam Smith', phone: '+16785550142' },
     'seed',
   )
   const course = await new CoursesRepo(db, loc).create({
@@ -60,7 +60,7 @@ test('GET /:loc/:token renders the branded player with lessons and 0% progress',
   const html = await res.text()
   expect(html).toContain('<!doctype html>')
   expect(html).toContain('Wholesaling Playbook')
-  expect(html).toContain('Jamal — Cash Offers')
+  expect(html).toContain('Alex — Cash Offers')
   expect(html).toContain('Find sellers')
   expect(html).toContain('Make the offer')
   expect(html).toContain('0%')
@@ -177,3 +177,4 @@ test('a draft (unpublished) course 404s the player and accepts no completions, e
   )
   expect(rows[0]?.n).toBe(0)
 })
+

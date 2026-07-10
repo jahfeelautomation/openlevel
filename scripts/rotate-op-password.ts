@@ -4,7 +4,7 @@
  * exposed on a public URL. Inputs come from env (never argv — argv leaks
  * into `ps` output and shell history on the host):
  *
- *   ROTATE_OPERATOR_ID=op_jf ROTATE_NEW_PASSWORD='...' npx tsx scripts/rotate-op-password.ts
+ *   ROTATE_OPERATOR_ID=op_AL ROTATE_NEW_PASSWORD='...' npx tsx scripts/rotate-op-password.ts
  *
  * Refuses passwords under 12 chars. Prints the operator id/email on success,
  * never the password.
@@ -34,3 +34,4 @@ if (res.rowCount !== 1) {
 }
 console.log(`rotated password for ${operatorId} (${res.rows[0].email})`)
 await pool.end()
+

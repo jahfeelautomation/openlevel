@@ -12,7 +12,7 @@ login → inbox → thread → AI-draft flow end to end.
   verbatim, so the dev DB is schema-identical to production Postgres — only the
   driver differs (`PgliteDatabase` vs `PgDatabase`, both behind the same
   `Database` interface).
-- **Seed:** `db/seed.ts` creates one sub-account (`Jamal — Cash Offers`), one
+- **Seed:** `db/seed.ts` creates one sub-account (`Alex — Cash Offers`), one
   operator login, a Chatwoot channel link, and three conversations with message
   history. Idempotent — re-running is a no-op if any location exists.
 - **AI + Chatwoot are stubbed in dev:** the dev server injects a canned Claude
@@ -45,7 +45,7 @@ Open **http://localhost:5273** and sign in:
 ## What you can do
 
 1. **Conversations** (lands here) — three-pane inbox: conversation list, the
-   selected thread + composer, and a contact side-panel. Open *Tanya Okafor* to
+   selected thread + composer, and a contact side-panel. Open *Taylor Reed* to
    see an inbound + an outbound message.
 2. **Draft from agent** — in an open thread, click it. The approve-first AI
    reply lands in the composer for you to edit and send (read-only — it persists
@@ -69,4 +69,5 @@ real login flow and writes `openlevel-{login,inbox,thread,ai-draft,contacts}-<da
 It needs both dev servers running and Chrome at the default Windows install path
 (edit `CHROME` in the script otherwise). This is the repeatable artifact for the
 "no screenshots, no commit" rule.
+
 

@@ -17,7 +17,7 @@ function fakeClaude(text = 'Happy to help — yes, we are open Saturday 9-5.') {
 
 test('drafts with the per-client key + Haiku model and persists nothing', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: {} }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: {} }]) // getById
   db.enqueue([{ id: 'conv1', location_id: 'locA', contact_id: 'c1', external_id: '55' }]) // conversations.get
   db.enqueue([{ id: 't1', type: 'message', payload: { direction: 'inbound', body: 'Are you open Saturday?' } }]) // timeline
 
@@ -39,7 +39,7 @@ test('drafts with the per-client key + Haiku model and persists nothing', async 
 
 test('404 when the conversation does not exist', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: {} }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: {} }]) // getById
   db.enqueue([]) // conversations.get -> none
   const claude = fakeClaude()
   const res = await draftConversationReply(
@@ -53,7 +53,7 @@ test('404 when the conversation does not exist', async () => {
 
 test('400 when the client has no anthropic key', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: {} }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: {} }]) // getById
   const claude = fakeClaude()
   const res = await draftConversationReply(
     { db, claude: claude.client, resolveSecret: () => undefined },
@@ -63,3 +63,4 @@ test('400 when the client has no anthropic key', async () => {
   expect(res).toMatchObject({ ok: false, status: 400 })
   expect(claude.calls).toHaveLength(0)
 })
+

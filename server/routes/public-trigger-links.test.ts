@@ -22,8 +22,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   await db.query(
@@ -125,3 +125,4 @@ test('an unknown slug 404s and records no click', async () => {
   const rows = await clicks(db, link.id)
   expect(rows).toHaveLength(0)
 })
+

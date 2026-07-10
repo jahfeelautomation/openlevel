@@ -4,7 +4,7 @@ import { LocationsRepo } from './locations-repo'
 test('getById returns the location row and queries by id', async () => {
   const db = new FakeDatabase()
   db.enqueue([
-    { id: 'locA', name: 'Jamal', slug: 'jamal', client_slug: 'jamal', branding: {}, settings: { replyMode: 'autonomous' } },
+    { id: 'locA', name: 'Alex', slug: 'Alex', client_slug: 'Alex', branding: {}, settings: { replyMode: 'autonomous' } },
   ])
   const loc = await new LocationsRepo(db).getById('locA')
   expect(loc?.id).toBe('locA')
@@ -17,3 +17,4 @@ test('getById returns undefined when the location is missing', async () => {
   db.enqueue([])
   expect(await new LocationsRepo(db).getById('nope')).toBeUndefined()
 })
+

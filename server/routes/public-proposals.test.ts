@@ -24,7 +24,7 @@ async function setup() {
   await db.query("INSERT INTO locations (id, name, slug) VALUES ($1,'Test','test')", [loc])
 
   const contact = await new ContactsRepo(db, loc).upsertByMatch(
-    { name: 'Jamal Carter', email: 'jamal@example.com' },
+    { name: 'Alex Mercer', email: 'Alex@example.com' },
     'manual',
   )
 
@@ -101,13 +101,13 @@ test('POST sign records the signature, flips to signed, and fires proposal_signe
   const res = await app.request('/loc_test/marketing-retainer/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signer_name: 'Jamal Carter' }),
+    body: JSON.stringify({ signer_name: 'Alex Mercer' }),
   })
 
   expect(res.status).toBe(200)
   const body = (await res.json()) as { ok: boolean; signer_name: string; signed_at: string }
   expect(body.ok).toBe(true)
-  expect(body.signer_name).toBe('Jamal Carter')
+  expect(body.signer_name).toBe('Alex Mercer')
   expect(body.signed_at).toBeTruthy()
 
   // The proposal is honestly signed: real name + timestamp stored.
@@ -116,7 +116,7 @@ test('POST sign records the signature, flips to signed, and fires proposal_signe
     [proposalId],
   )
   expect(row?.status).toBe('signed')
-  expect(row?.signer_name).toBe('Jamal Carter')
+  expect(row?.signer_name).toBe('Alex Mercer')
   expect(row?.signed_at).toBeTruthy()
 
   // The proposal_signed workflow ran against the linked contact.
@@ -148,7 +148,7 @@ test('POST sign on an already-signed proposal echoes the stored signature (idemp
   await app.request('/loc_test/marketing-retainer/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signer_name: 'Jamal Carter' }),
+    body: JSON.stringify({ signer_name: 'Alex Mercer' }),
   })
   // A second sign attempt (e.g. double submit) doesn't overwrite — it echoes.
   const res = await app.request('/loc_test/marketing-retainer/sign', {
@@ -159,7 +159,7 @@ test('POST sign on an already-signed proposal echoes the stored signature (idemp
   expect(res.status).toBe(200)
   const body = (await res.json()) as { ok: boolean; signer_name: string }
   expect(body.ok).toBe(true)
-  expect(body.signer_name).toBe('Jamal Carter') // the original, not the second attempt
+  expect(body.signer_name).toBe('Alex Mercer') // the original, not the second attempt
 })
 
 test('POST decline flips to declined; signing afterward is refused (409)', async () => {
@@ -180,7 +180,7 @@ test('POST decline flips to declined; signing afterward is refused (409)', async
   const signRes = await app.request('/loc_test/marketing-retainer/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signer_name: 'Jamal Carter' }),
+    body: JSON.stringify({ signer_name: 'Alex Mercer' }),
   })
   expect(signRes.status).toBe(409)
 })
@@ -190,7 +190,8 @@ test('POST sign is 404 for an unknown proposal slug', async () => {
   const res = await app.request('/loc_test/nope/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signer_name: 'Jamal Carter' }),
+    body: JSON.stringify({ signer_name: 'Alex Mercer' }),
   })
   expect(res.status).toBe(404)
 })
+

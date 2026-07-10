@@ -21,12 +21,12 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   const contact = await new ContactsRepo(db, loc).upsertByMatch(
-    { name: 'Marcus Webb', phone: '+16785550142' },
+    { name: 'Sam Smith', phone: '+16785550142' },
     'seed',
   )
 
@@ -287,3 +287,4 @@ test('DELETE /:id/enrollments/:enrollId un-enrolls a student; cross-course 404s'
   const detail = (await (await jsonReq(app, `/${one.course.id}`, 'GET')).json()) as { enrollments: unknown[] }
   expect(detail.enrollments).toHaveLength(0)
 })
+

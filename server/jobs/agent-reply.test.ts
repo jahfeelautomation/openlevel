@@ -16,7 +16,7 @@ function fakeClaude(text = 'drafted reply text') {
 
 test('approve-first (default) persists a DRAFT and never sends', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: {} }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: {} }]) // getById
   db.enqueue([{ id: 't-prev', type: 'message', payload: { direction: 'inbound', body: 'hi' } }]) // timeline list
   db.enqueue([{ id: 'm-draft' }]) // insertOutbound (draft)
   db.enqueue([{ id: 't-draft' }]) // timeline add
@@ -47,14 +47,14 @@ test('approve-first (default) persists a DRAFT and never sends', async () => {
 
 test('autonomous mode sends through the shared outbound path', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: { replyMode: 'autonomous' } }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: { replyMode: 'autonomous' } }]) // getById
   db.enqueue([{ id: 't-prev', type: 'message', payload: {} }]) // timeline list
   db.enqueue([{ id: 'conv1', location_id: 'locA', contact_id: 'c1', external_id: '55' }]) // conversations.get
   db.enqueue([
     {
       location_id: 'locA',
       inbox_id: '7',
-      config: { baseUrl: 'https://chat', accountId: '1', tokenSecretName: 'jamal:chatwoot:api_token' },
+      config: { baseUrl: 'https://chat', accountId: '1', tokenSecretName: 'Alex:chatwoot:api_token' },
     },
   ]) // getForLocation
   db.enqueue([{ id: 'm-out' }]) // insertOutbound (sent)
@@ -83,7 +83,7 @@ test('autonomous mode sends through the shared outbound path', async () => {
 
 test('skips when the client has no anthropic key', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'locA', slug: 'jamal', client_slug: 'jamal', settings: {} }]) // getById
+  db.enqueue([{ id: 'locA', slug: 'Alex', client_slug: 'Alex', settings: {} }]) // getById
   const claude = fakeClaude()
   const res = await handleAgentReply(
     { db, claude: claude.client, resolveSecret: () => undefined },
@@ -105,3 +105,4 @@ test('skips when the location is unknown', async () => {
   expect(res.skipped).toMatch(/location/i)
   expect(claude.calls).toHaveLength(0)
 })
+

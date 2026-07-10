@@ -63,7 +63,8 @@ export function formatClickTime(iso: string | null, now: Date = new Date()): str
 }
 
 /** Strip the scheme + any trailing slash so a destination reads cleanly in a card
- *  ("jamalbuyshouses.example/cash-offer"), without misrepresenting the real URL. */
+ *  ("acmehomebuyers.example/cash-offer"), without misrepresenting the real URL. */
 export function prettyUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
+

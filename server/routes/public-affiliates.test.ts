@@ -21,8 +21,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   await db.query(
@@ -38,7 +38,7 @@ async function setup() {
   })
   const affiliate = await new AffiliatesRepo(db, loc).create({
     programId: program.id,
-    name: 'Marcus Webb',
+    name: 'Sam Smith',
     code: 'MARCUS',
   })
 
@@ -121,3 +121,4 @@ test('a paused program 404s every link under it and records no click', async () 
   const rows = await clicks(db, affiliate.id)
   expect(rows).toHaveLength(0)
 })
+

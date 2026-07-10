@@ -139,16 +139,16 @@ test('lists a contact notes scoped to the location', async () => {
 
 test('creates a note on a contact and returns 201', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 'n1', contact_id: 'c1', body: 'Called back', author: 'JF' }])
+  db.enqueue([{ id: 'n1', contact_id: 'c1', body: 'Called back', author: 'AL' }])
   const res = await harness(db).request('/c1/notes', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ body: 'Called back', author: 'JF' }),
+    body: JSON.stringify({ body: 'Called back', author: 'AL' }),
   })
   expect(res.status).toBe(201)
   expect(await res.json()).toEqual({
     ok: true,
-    note: { id: 'n1', contact_id: 'c1', body: 'Called back', author: 'JF' },
+    note: { id: 'n1', contact_id: 'c1', body: 'Called back', author: 'AL' },
   })
   expect(db.calls[0]?.params[0]).toBe('locA') // location scoped
   expect(db.calls[0]?.params[2]).toBe('c1') // contact from the path
@@ -480,4 +480,5 @@ test('PUT /:id/state returns 404 when the contact is not in this location', asyn
   })
   expect(res.status).toBe(404)
 })
+
 

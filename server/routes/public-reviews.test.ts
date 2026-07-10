@@ -20,13 +20,13 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
 
   const contact = await new ContactsRepo(db, loc).upsertByMatch(
-    { name: 'Marcus Webb', phone: '+16785550142' },
+    { name: 'Sam Smith', phone: '+16785550142' },
     'seed',
   )
   const request = await new ReviewRequestsRepo(db, loc).create({
@@ -48,10 +48,10 @@ test('GET /:loc/:token renders the star-rating page, prefilled with the contact 
   const html = await res.text()
   expect(html).toContain('<!doctype html>')
   expect(html).toContain('How did we do?')
-  expect(html).toContain('Jamal — Cash Offers')
+  expect(html).toContain('Alex — Cash Offers')
   expect(html).toContain('name="rating"') // star radios present
   expect(html).toContain('action="/api/public/reviews/loc_test/tok_demo/submit"')
-  expect(html).toContain('value="Marcus Webb"') // name prefilled from the contact
+  expect(html).toContain('value="Sam Smith"') // name prefilled from the contact
 })
 
 test('GET /:loc/:token is a styled html 404 for an unknown token', async () => {
@@ -77,7 +77,7 @@ test('POST submit stores the review, links it, marks the request completed, logs
   const res = await app.request('/loc_test/tok_demo/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rating: 5, body: 'Fast and fair — closed in a week.', name: 'Marcus Webb' }),
+    body: JSON.stringify({ rating: 5, body: 'Fast and fair — closed in a week.', name: 'Sam Smith' }),
   })
 
   expect(res.status).toBe(200)
@@ -98,7 +98,7 @@ test('POST submit stores the review, links it, marks the request completed, logs
   expect(reviews.length).toBe(1)
   expect(reviews[0]?.rating).toBe(5)
   expect(reviews[0]?.body).toBe('Fast and fair — closed in a week.')
-  expect(reviews[0]?.reviewer_name).toBe('Marcus Webb')
+  expect(reviews[0]?.reviewer_name).toBe('Sam Smith')
   expect(reviews[0]?.contact_id).toBe(contactId)
   expect(reviews[0]?.request_id).toBe(requestId)
   expect(reviews[0]?.source).toBe('direct')
@@ -178,3 +178,4 @@ test('POST submit twice is rejected — a completed link can not leave a second 
   expect(reviews.length).toBe(1)
   expect(reviews[0]?.rating).toBe(5)
 })
+

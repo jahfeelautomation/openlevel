@@ -24,8 +24,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   await db.query(
@@ -113,18 +113,18 @@ test('POST /program rejects a non-http(s) landing URL', async () => {
 
 test('POST / refuses to add an affiliate before the program exists', async () => {
   const { app } = await setup()
-  const res = await jsonReq(app, '/', 'POST', { name: 'Marcus Webb' })
+  const res = await jsonReq(app, '/', 'POST', { name: 'Sam Smith' })
   expect(res.status).toBe(409)
 })
 
 test('POST / adds an affiliate, deriving a code and a hosted referral URL', async () => {
   const { db, loc, app } = await setup()
   await seedProgram(db, loc)
-  const res = await jsonReq(app, '/', 'POST', { name: 'Marcus Webb' })
+  const res = await jsonReq(app, '/', 'POST', { name: 'Sam Smith' })
   expect(res.status).toBe(201)
   const body = (await res.json()) as { ok: true; affiliate: AffiliateShape }
-  expect(body.affiliate.code).toBe('MARCUSWEBB')
-  expect(body.affiliate.ref_url).toBe('/api/public/ref/loc_test/MARCUSWEBB')
+  expect(body.affiliate.code).toBe('SAMSMITH')
+  expect(body.affiliate.ref_url).toBe('/api/public/ref/loc_test/SAMSMITH')
   expect(body.affiliate.clicks).toBe(0) // brand new → honest zero
   expect(body.affiliate.referrals).toBe(0)
 })
@@ -132,11 +132,11 @@ test('POST / adds an affiliate, deriving a code and a hosted referral URL', asyn
 test('POST / de-dupes a colliding code', async () => {
   const { db, loc, app } = await setup()
   await seedProgram(db, loc)
-  await jsonReq(app, '/', 'POST', { name: 'Marcus Webb' })
-  const res = await jsonReq(app, '/', 'POST', { name: 'Marcus Webb' })
+  await jsonReq(app, '/', 'POST', { name: 'Sam Smith' })
+  const res = await jsonReq(app, '/', 'POST', { name: 'Sam Smith' })
   const body = (await res.json()) as { affiliate: AffiliateShape }
-  expect(body.affiliate.code).not.toBe('MARCUSWEBB') // suffix appended
-  expect(body.affiliate.code.startsWith('MARCUSWEBB-')).toBe(true)
+  expect(body.affiliate.code).not.toBe('SAMSMITH') // suffix appended
+  expect(body.affiliate.code.startsWith('SAMSMITH-')).toBe(true)
 })
 
 test('GET / reports honest per-affiliate stats with NO join fan-out across clicks + referrals', async () => {
@@ -144,7 +144,7 @@ test('GET / reports honest per-affiliate stats with NO join fan-out across click
   const program = await seedProgram(db, loc)
   const affiliate = await new AffiliatesRepo(db, loc).create({
     programId: program.id,
-    name: 'Marcus Webb',
+    name: 'Sam Smith',
     code: 'MARCUS',
   })
   // THREE clicks and TWO referrals. A naive double LEFT JOIN + GROUP BY would
@@ -318,3 +318,5 @@ test('GET /:id 404s for an unknown affiliate', async () => {
   const res = await app.request('/nope')
   expect(res.status).toBe(404)
 })
+
+

@@ -19,8 +19,8 @@ describe('brevo adapter: sendEmail', () => {
     const fetchImpl = okFetch({ messageId: '<202606100001.123@smtp-relay.mailin.fr>' })
     const brevo = createBrevoAdapter({
       apiKey: API_KEY,
-      fromEmail: 'jamal@cashoffers.example.com',
-      fromName: 'Jamal — Cash Offers',
+      fromEmail: 'Alex@cashoffers.example.com',
+      fromName: 'Alex — Cash Offers',
       fetchImpl,
     })
 
@@ -36,7 +36,7 @@ describe('brevo adapter: sendEmail', () => {
     expect((init.headers as Record<string, string>)['api-key']).toBe(API_KEY)
     expect((init.headers as Record<string, string>)['content-type']).toBe('application/json')
     expect(JSON.parse(String(init.body))).toEqual({
-      sender: { email: 'jamal@cashoffers.example.com', name: 'Jamal — Cash Offers' },
+      sender: { email: 'Alex@cashoffers.example.com', name: 'Alex — Cash Offers' },
       to: [{ email: 'lead@example.com', name: 'Lead Person' }],
       subject: 'June cash offer',
       textContent: 'Hi Lead, your offer is ready.',
@@ -70,3 +70,4 @@ describe('brevo adapter: sendEmail', () => {
     await expect(brevo.sendEmail(msg)).rejects.toThrow(/missing messageId/)
   })
 })
+

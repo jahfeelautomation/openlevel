@@ -120,7 +120,7 @@ the Automations nav item.
 
 ## Seed (`db/seed.ts`)
 
-Two workflows on `loc_jamal`:
+Two workflows on `loc_alex`:
 1. **"New lead welcome"** — trigger `contact_created`, status **live**, steps:
    `add_tag {tag:'lead'}` → `send_sms {body:'Hi {{first_name}}, thanks for reaching out — I'll be in touch shortly about your property.'}`
 2. **"Appointment confirmation"** — trigger `appointment_booked`, status **draft**, steps:
@@ -142,3 +142,4 @@ Two workflows on `loc_jamal`:
 Execution/runner (next slice), branching/conditions, drag-reorder (steps append +
 remove only this slice), wait scheduling semantics (stored, not yet scheduled),
 analytics/run history, templates. The vocab is intentionally small but real.
+

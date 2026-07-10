@@ -122,11 +122,11 @@ test('sign stamps the typed signer name + signed_at and moves to signed', async 
   db.enqueue([{ id: 'p1', status: 'signed' }])
   const repo = new ProposalsRepo(db, 'locA')
 
-  await repo.sign('p1', 'Jamal Carter')
+  await repo.sign('p1', 'Alex Mercer')
   expect(db.calls[0]?.sql).toMatch(/SET status='signed'/i)
   expect(db.calls[0]?.sql).toMatch(/signer_name=\$2/i)
   expect(db.calls[0]?.sql).toMatch(/signed_at=now\(\)/i)
-  expect(db.calls[0]?.params).toEqual(['locA', 'Jamal Carter', 'p1'])
+  expect(db.calls[0]?.params).toEqual(['locA', 'Alex Mercer', 'p1'])
 })
 
 test('decline flips the proposal to declined scoped to location + id', async () => {
@@ -148,3 +148,4 @@ test('setStatus flips to an arbitrary status scoped to location + id', async () 
   expect(db.calls[0]?.sql).toMatch(/UPDATE proposals SET status=\$2/i)
   expect(db.calls[0]?.params).toEqual(['locA', 'draft', 'p1'])
 })
+

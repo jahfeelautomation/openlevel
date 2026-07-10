@@ -1,7 +1,7 @@
 import { renderCourseNotFound, renderCoursePage } from './course-page'
 
 const base = {
-  businessName: 'Jamal — Cash Offers',
+  businessName: 'Alex — Cash Offers',
   courseTitle: 'Wholesaling Playbook',
   description: 'Everything to close your first deal.',
   brandColor: '#4f46e5',
@@ -27,7 +27,7 @@ test('renders a self-contained, noindex document branded for the business', () =
   expect(html).toContain('<!doctype html>')
   expect(html).toContain('name="robots" content="noindex"')
   expect(html).toContain('--brand:#4f46e5')
-  expect(html).toContain('Jamal — Cash Offers')
+  expect(html).toContain('Alex — Cash Offers')
   expect(html).toContain('Wholesaling Playbook')
   expect(html).toContain('Everything to close your first deal.')
 })
@@ -107,3 +107,4 @@ test('renderCourseNotFound is a styled html 404', () => {
   expect(html).toContain('<!doctype html>')
   expect(html.toLowerCase()).toContain('not found')
 })
+

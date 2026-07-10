@@ -47,11 +47,11 @@ test('create sets location $1, community $3, defaults role to member and nulls',
   db.enqueue([{ id: 'm_new', community_id: 'cm1', role: 'member' }])
   const repo = new CommunityMembersRepo(db, 'locA')
 
-  await repo.create({ communityId: 'cm1', name: 'Jamal Carter' })
+  await repo.create({ communityId: 'cm1', name: 'Alex Mercer' })
   const params = db.calls[0]?.params
   expect(params?.[0]).toBe('locA') // location_id is $1
   expect(params).toContain('cm1')
-  expect(params).toContain('Jamal Carter')
+  expect(params).toContain('Alex Mercer')
   expect(params).toContain('member') // default role
   expect(params).toContain(null) // contact_id + email default null
 })
@@ -106,3 +106,4 @@ test('remove deletes the member scoped to location + id', async () => {
   expect(db.calls[0]?.sql).toMatch(/DELETE FROM community_members WHERE location_id=\$1 AND id=\$2/i)
   expect(db.calls[0]?.params).toEqual(['locA', 'm1'])
 })
+

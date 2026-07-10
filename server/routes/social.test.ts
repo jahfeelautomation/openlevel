@@ -24,8 +24,8 @@ async function setup(opts?: { resolvePublisher?: ResolveFn }) {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
 
@@ -82,17 +82,17 @@ const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString(
 
 test('POST /accounts adds an account that is honestly NOT connected', async () => {
   const { app } = await setup()
-  const res = await jsonReq(app, '/accounts', 'POST', { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const res = await jsonReq(app, '/accounts', 'POST', { platform: 'facebook', handle: 'Acme Home Buyers' })
   expect(res.status).toBe(201)
   expect(await res.json()).toMatchObject({
     ok: true,
-    account: { platform: 'facebook', handle: 'Jamal Buys Houses', connected: false },
+    account: { platform: 'facebook', handle: 'Acme Home Buyers', connected: false },
   })
 })
 
 test('POST /accounts/:id/connect verifies for real — an unconfigured channel stays honestly unconnected', async () => {
   const { app } = await setup() // the REAL resolver: nothing configured for this location
-  const { account } = await createAccount(app, { platform: 'instagram', handle: '@jamalbuyshouses' })
+  const { account } = await createAccount(app, { platform: 'instagram', handle: '@acmehomebuyers' })
 
   const res = await jsonReq(app, `/accounts/${account.id}/connect`, 'POST')
   expect(res.status).toBe(200)
@@ -109,7 +109,7 @@ test('POST /accounts/:id/connect verifies for real — an unconfigured channel s
 test('POST /accounts/:id/connect flips connected when the channel resolves, and back off when it stops', async () => {
   let resolution: ResolvedSocialPublisher = workingChannel('facebook', 'fb_live')
   const { app } = await setup({ resolvePublisher: async () => resolution })
-  const { account } = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const { account } = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
 
   const connect = await jsonReq(app, `/accounts/${account.id}/connect`, 'POST')
   expect(await connect.json()).toMatchObject({ ok: true, account: { connected: true } })
@@ -147,8 +147,8 @@ test('POST /posts with no datetime is an honest draft; with a datetime it is sch
 
 test('GET / resolves each post to the accounts it targets', async () => {
   const { app } = await setup()
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
-  const ig = await createAccount(app, { platform: 'instagram', handle: '@jamalbuyshouses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
+  const ig = await createAccount(app, { platform: 'instagram', handle: '@acmehomebuyers' })
   await createPost(app, { body: 'Closed in 9 days', accountIds: [fb.account.id, ig.account.id] })
 
   const planner = (await (await jsonReq(app, '/', 'GET')).json()) as {
@@ -156,7 +156,7 @@ test('GET / resolves each post to the accounts it targets', async () => {
   }
   const post = planner.posts.find((p) => p.body === 'Closed in 9 days')
   expect(post?.targets.map((t) => t.platform).sort()).toEqual(['facebook', 'instagram'])
-  expect(post?.targets.map((t) => t.handle)).toContain('@jamalbuyshouses')
+  expect(post?.targets.map((t) => t.handle)).toContain('@acmehomebuyers')
 })
 
 test('GET / never fans a post out to another location account (foreign target dropped)', async () => {
@@ -188,7 +188,7 @@ test('GET / never fans a post out to another location account (foreign target dr
 
 test('GET / rollup is DERIVED from real rows (honest status counts + zero connected)', async () => {
   const { app } = await setup({ resolvePublisher: resolverFor({ facebook: workingChannel('facebook', 'fb_1') }) })
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
   await createPost(app, { body: 'a draft' })
   await createPost(app, { body: 'a scheduled', scheduledAt: inDays(5) })
   const pub = await createPost(app, { body: 'to publish', accountIds: [fb.account.id] })
@@ -242,7 +242,7 @@ test('POST /posts/:id/publish with no channels 409s and the post stays a draft',
 
 test('POST /posts/:id/publish refuses when no channel is configured — honest reason, status unchanged', async () => {
   const { app } = await setup() // real resolver, nothing configured
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
   const post = await createPost(app, { body: 'ship it', accountIds: [fb.account.id] })
 
   const res = await jsonReq(app, `/posts/${post.post.id}/publish`, 'POST')
@@ -267,8 +267,8 @@ test('POST /posts/:id/publish REALLY publishes through the channels and records 
       instagram: igFailure,
     }),
   })
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
-  const ig = await createAccount(app, { platform: 'instagram', handle: '@jamalbuyshouses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
+  const ig = await createAccount(app, { platform: 'instagram', handle: '@acmehomebuyers' })
   const post = await createPost(app, { body: 'ship it', accountIds: [fb.account.id, ig.account.id] })
 
   const res = await jsonReq(app, `/posts/${post.post.id}/publish`, 'POST')
@@ -309,7 +309,7 @@ test('the attached image rides along to the channel adapters', async () => {
   const { app } = await setup({
     resolvePublisher: resolverFor({ facebook: workingChannel('facebook', 'fb_pic', fbCalls) }),
   })
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
   const post = await createPost(app, {
     body: 'Open house Saturday',
     mediaUrl: 'https://img.example/open-house.jpg',
@@ -333,8 +333,8 @@ test('POST /posts stores an attached image url, PATCH can clear it, junk urls ar
 
 test('PATCH /posts/:id edits the body and replaces the target accounts', async () => {
   const { app } = await setup()
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
-  const ig = await createAccount(app, { platform: 'instagram', handle: '@jamalbuyshouses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
+  const ig = await createAccount(app, { platform: 'instagram', handle: '@acmehomebuyers' })
   const post = await createPost(app, { body: 'first cut', accountIds: [fb.account.id] })
 
   const res = await jsonReq(app, `/posts/${post.post.id}`, 'PATCH', {
@@ -353,7 +353,7 @@ test('PATCH /posts/:id edits the body and replaces the target accounts', async (
 
 test('DELETE /posts/:id removes the post and cascades its targets', async () => {
   const { app, db, loc } = await setup()
-  const fb = await createAccount(app, { platform: 'facebook', handle: 'Jamal Buys Houses' })
+  const fb = await createAccount(app, { platform: 'facebook', handle: 'Acme Home Buyers' })
   const post = await createPost(app, { body: 'temp', accountIds: [fb.account.id] })
 
   expect((await jsonReq(app, `/posts/${post.post.id}`, 'DELETE')).status).toBe(200)
@@ -371,3 +371,4 @@ test('unknown post and account ids 404 on their actions', async () => {
   expect((await jsonReq(app, '/posts/nope', 'DELETE')).status).toBe(404)
   expect((await jsonReq(app, '/accounts/nope', 'PATCH', { handle: 'x' })).status).toBe(404)
 })
+

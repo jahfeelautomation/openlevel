@@ -52,8 +52,8 @@ import { WorkflowActionsRepo } from '../server/repos/workflow-actions-repo'
 import { WorkflowsRepo } from '../server/repos/workflows-repo'
 
 /**
- * Seed one demo tenant so the app has something to show: location "Jamal"
- * (a cash-offer real-estate operation), operator JF with access to it, a
+ * Seed one demo tenant so the app has something to show: location "Alex"
+ * (a cash-offer real-estate operation), operator AL with access to it, a
  * Chatwoot channel link, and a few contacts/conversations/messages/timeline
  * events. Idempotent: a no-op if any location already exists, so it is safe to
  * call on every dev boot.
@@ -64,17 +64,17 @@ export async function seedDatabase(db: Database): Promise<void> {
   const existing = await db.query('SELECT id FROM locations LIMIT 1')
   if (existing.length > 0) return
 
-  const locId = 'loc_jamal'
-  const opId = 'op_jf'
+  const locId = 'loc_alex'
+  const opId = 'op_AL'
 
   await db.query(
     `INSERT INTO locations (id, name, slug, client_slug, branding, settings)
      VALUES ($1,$2,$3,$4,$5,$6)`,
     [
       locId,
-      'Jamal — Cash Offers',
-      'jamal',
-      'jamal',
+      'Alex — Cash Offers',
+      'Alex',
+      'Alex',
       JSON.stringify({ color: '#4f46e5' }),
       JSON.stringify({
         // Reply mode stays at the safe default: the agent drafts for a human to
@@ -84,9 +84,9 @@ export async function seedDatabase(db: Database): Promise<void> {
         agent: {
           enabled: true,
           persona:
-            'You are Jamal\'s assistant, the friendly first point of contact for homeowners exploring a fast, no-obligation cash offer on their house.',
+            'You are Alex\'s assistant, the friendly first point of contact for homeowners exploring a fast, no-obligation cash offer on their house.',
           instructions:
-            'Be warm and concise. Offer to book a free 15-minute consultation when someone is interested. Never quote a specific offer amount — say Jamal confirms every offer personally after a quick look at the property.',
+            'Be warm and concise. Offer to book a free 15-minute consultation when someone is interested. Never quote a specific offer amount — say Alex confirms every offer personally after a quick look at the property.',
           facts: [
             'We buy houses in any condition — no repairs, no cleaning, no showings.',
             'There are no agent fees or closing costs to the seller.',
@@ -95,7 +95,7 @@ export async function seedDatabase(db: Database): Promise<void> {
           ],
         },
         // Voice provider CHOICE only — the Twilio keys themselves live in the
-        // vault (jamal:twilio:*), so the Settings page honestly reads
+        // vault (Alex:twilio:*), so the Settings page honestly reads
         // "not connected" until they exist. Numbers are the fictional 555 range.
         voice: {
           provider: 'twilio',
@@ -108,21 +108,21 @@ export async function seedDatabase(db: Database): Promise<void> {
 
   await db.query(
     `INSERT INTO operators (id, email, name, role, password_hash) VALUES ($1,$2,$3,$4,$5)`,
-    [opId, 'admin@acmecorp.com', 'JF', 'owner', await hashPassword('openlevel')],
+    [opId, 'admin@acmecorp.com', 'AL', 'owner', await hashPassword('openlevel')],
   )
   await db.query(`INSERT INTO operator_locations (operator_id, location_id) VALUES ($1,$2)`, [opId, locId])
 
   await db.query(
     `INSERT INTO channel_links (id, location_id, provider, inbox_id, config) VALUES ($1,$2,$3,$4,$5)`,
     [
-      'cl_jamal_chatwoot',
+      'cl_Alex_chatwoot',
       locId,
       'chatwoot',
       '1',
       JSON.stringify({
         baseUrl: 'https://chat.acmecorp.com',
         accountId: '1',
-        tokenSecretName: 'jamal:chatwoot:api_token',
+        tokenSecretName: 'Alex:chatwoot:api_token',
       }),
     ],
   )
@@ -144,20 +144,20 @@ export async function seedDatabase(db: Database): Promise<void> {
     outbound?: string
   }[] = [
     {
-      name: 'Derek Sull',
+      name: 'Jordan Doe',
       phone: '+16785550188',
       cwConv: '101',
       inbound: ['Can you call me tomorrow about the duplex?'],
     },
     {
-      name: 'Tanya Okafor',
+      name: 'Taylor Reed',
       phone: '+14045550173',
       cwConv: '102',
       inbound: ['Is the cash offer still good?'],
       outbound: 'Yes! It is. Sending the paperwork over now — give it a quick look when you can.',
     },
     {
-      name: 'Marcus Webb',
+      name: 'Sam Smith',
       phone: '+16785550142',
       cwConv: '103',
       inbound: [
@@ -223,22 +223,22 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Notes on a contact record (the GHL "Notes" panel). The pinned one floats to
   // the top; the rest sort newest-first. Inserted oldest-first so the timestamps
   // order the way the UI renders them.
-  const marcusId = contactIdByName['Marcus Webb']
+  const marcusId = contactIdByName['Sam Smith']
   if (marcusId) {
     await contactNotes.create({
       contactId: marcusId,
       body: 'Found us through the Facebook post about selling fast. Owns 482 Oakland Ave.',
-      author: 'JF',
+      author: 'AL',
     })
     await contactNotes.create({
       contactId: marcusId,
       body: 'Roof was replaced two years ago. Interior needs paint and new carpet in two bedrooms.',
-      author: 'JF',
+      author: 'AL',
     })
     const pinned = await contactNotes.create({
       contactId: marcusId,
       body: 'Prefers a text over a call — works second shift, so reach out before 2pm.',
-      author: 'JF',
+      author: 'AL',
     })
     await contactNotes.update(marcusId, pinned.id, { pinned: true })
   }
@@ -255,8 +255,8 @@ export async function seedDatabase(db: Database): Promise<void> {
   const dueAt = (offsetDays: number, hourUtc: number) =>
     new Date(startOfTodayUtc + offsetDays * 86_400_000 + hourUtc * 3_600_000).toISOString()
 
-  const derekId = contactIdByName['Derek Sull']
-  const tanyaId = contactIdByName['Tanya Okafor']
+  const derekId = contactIdByName['Jordan Doe']
+  const tanyaId = contactIdByName['Taylor Reed']
   if (marcusId && derekId && tanyaId) {
     await contactTasks.create({
       contactId: marcusId,
@@ -323,12 +323,12 @@ export async function seedDatabase(db: Database): Promise<void> {
     valueCents: number
     status: string
   }[] = [
-    { name: '482 Oakland Ave', contact: 'Marcus Webb', stageId: 'st_new', valueCents: 185_000_00, status: 'open' },
-    { name: 'Duplex on 5th', contact: 'Derek Sull', stageId: 'st_contacted', valueCents: 240_000_00, status: 'open' },
-    { name: 'Tanya — single family', contact: 'Tanya Okafor', stageId: 'st_offer', valueCents: 162_000_00, status: 'open' },
+    { name: '482 Oakland Ave', contact: 'Sam Smith', stageId: 'st_new', valueCents: 185_000_00, status: 'open' },
+    { name: 'Duplex on 5th', contact: 'Jordan Doe', stageId: 'st_contacted', valueCents: 240_000_00, status: 'open' },
+    { name: 'Tanya — single family', contact: 'Taylor Reed', stageId: 'st_offer', valueCents: 162_000_00, status: 'open' },
     { name: 'Maple St rental', contact: null, stageId: 'st_contract', valueCents: 119_500_00, status: 'open' },
     // One closed-won deal so the final stage and the "Won value" KPI aren't empty.
-    { name: 'Cedar Ct — closed', contact: 'Derek Sull', stageId: 'st_won', valueCents: 142_000_00, status: 'won' },
+    { name: 'Cedar Ct — closed', contact: 'Jordan Doe', stageId: 'st_won', valueCents: 142_000_00, status: 'won' },
   ]
   for (const o of seedOpps) {
     const opp = await opportunities.create({
@@ -429,7 +429,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       title: 'Inspection — 482 Oakland Ave',
       start: new Date(now.getTime() + 2 * 60 * 60_000), // ~2h from now, today
       durationMin: 60,
-      contact: 'Marcus Webb',
+      contact: 'Sam Smith',
       status: 'confirmed',
       locationText: '482 Oakland Ave',
     },
@@ -438,7 +438,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       title: 'Cash-offer consultation',
       start: at(1, 10),
       durationMin: 30,
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       status: 'scheduled',
     },
     {
@@ -446,7 +446,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       title: 'Walkthrough — single family',
       start: at(1, 14),
       durationMin: 60,
-      contact: 'Tanya Okafor',
+      contact: 'Taylor Reed',
       status: 'scheduled',
       locationText: 'Tanya — single family',
     },
@@ -455,7 +455,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       title: 'Follow-up call',
       start: at(3, 11),
       durationMin: 30,
-      contact: 'Tanya Okafor',
+      contact: 'Taylor Reed',
       status: 'scheduled',
     },
     {
@@ -485,9 +485,9 @@ export async function seedDatabase(db: Database): Promise<void> {
   // segment); the wider spread gives the Tags page a believable distribution — a
   // couple of shared tags and several one-offs.
   const contactTags: Record<string, string[]> = {
-    'Derek Sull': ['lead', 'cash-offer', 'website'],
-    'Tanya Okafor': ['seller', 'hot-lead', 'cash-offer'],
-    'Marcus Webb': ['seller', 'investor'],
+    'Jordan Doe': ['lead', 'cash-offer', 'website'],
+    'Taylor Reed': ['seller', 'hot-lead', 'cash-offer'],
+    'Sam Smith': ['seller', 'investor'],
   }
   for (const [name, tags] of Object.entries(contactTags)) {
     const id = contactIdByName[name]
@@ -522,12 +522,12 @@ export async function seedDatabase(db: Database): Promise<void> {
   })
   await customFields.create({ label: 'Pre-Approved', type: 'checkbox' })
 
-  const cfDerek = contactIdByName['Derek Sull']
+  const cfDerek = contactIdByName['Jordan Doe']
   if (cfDerek) {
     await contacts.setCustomField(cfDerek, cfLeadSource.key, 'Website')
     await contacts.setCustomField(cfDerek, cfBudget.key, 325000)
   }
-  const cfTanya = contactIdByName['Tanya Okafor']
+  const cfTanya = contactIdByName['Taylor Reed']
   if (cfTanya) {
     await contacts.setCustomField(cfTanya, cfLeadSource.key, 'Referral')
     await contacts.setCustomField(cfTanya, cfPropertyType.key, 'Single Family')
@@ -563,7 +563,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     subject: 'Still thinking about selling?',
     body:
       'Hi {{first_name}},\n\nJust checking in — if selling your home is still on your mind this ' +
-      'spring, I can put together a cash offer with no pressure and no fees. Reply anytime.\n\n— JF',
+      'spring, I can put together a cash offer with no pressure and no fees. Reply anytime.\n\n— AL',
     audienceTag: 'seller',
   })
 
@@ -578,13 +578,13 @@ export async function seedDatabase(db: Database): Promise<void> {
     subject: 'Thanks for reaching out, {{first_name}}',
     body:
       'Hi {{first_name}},\n\nThanks for getting in touch. I help homeowners sell quickly for a fair ' +
-      'cash price — no repairs, no fees, no pressure. When is a good time for a quick call?\n\n— JF',
+      'cash price — no repairs, no fees, no pressure. When is a good time for a quick call?\n\n— AL',
   })
   await templates.create({
     name: 'Appointment reminder',
     channel: 'sms',
     subject: null,
-    body: 'Hi {{first_name}}, just a reminder about our call today. Talk soon! — JF',
+    body: 'Hi {{first_name}}, just a reminder about our call today. Talk soon! — AL',
   })
   await templates.create({
     name: 'Missed you',
@@ -599,7 +599,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     body:
       'Hi {{first_name}},\n\nFollowing up on the cash offer for your home. The number is good for ' +
       '14 days and there are no fees or closing costs on your side. Happy to walk you through it ' +
-      'whenever works.\n\n— JF',
+      'whenever works.\n\n— AL',
   })
 
   // Two automation workflows so the Automations builder opens onto real flows:
@@ -704,12 +704,12 @@ export async function seedDatabase(db: Database): Promise<void> {
 
   const seedFormSubs: { contact: string; values: Record<string, string> }[] = [
     {
-      contact: 'Marcus Webb',
-      values: { full_name: 'Marcus Webb', phone: '+16785550142', address: '482 Oakland Ave' },
+      contact: 'Sam Smith',
+      values: { full_name: 'Sam Smith', phone: '+16785550142', address: '482 Oakland Ave' },
     },
     {
-      contact: 'Derek Sull',
-      values: { full_name: 'Derek Sull', phone: '+16785550188', address: 'Duplex on 5th St' },
+      contact: 'Jordan Doe',
+      values: { full_name: 'Jordan Doe', phone: '+16785550188', address: 'Duplex on 5th St' },
     },
   ]
   for (const s of seedFormSubs) {
@@ -786,9 +786,9 @@ export async function seedDatabase(db: Database): Promise<void> {
 
   const seedSurveySubs: { contact: string; values: Record<string, string> }[] = [
     {
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       values: {
-        full_name: 'Derek Sull',
+        full_name: 'Jordan Doe',
         phone: '+16785550188',
         address: 'Duplex on 5th St',
         beds: '4',
@@ -798,9 +798,9 @@ export async function seedDatabase(db: Database): Promise<void> {
       },
     },
     {
-      contact: 'Tanya Okafor',
+      contact: 'Taylor Reed',
       values: {
-        full_name: 'Tanya Okafor',
+        full_name: 'Taylor Reed',
         phone: '+16785550133',
         address: '912 Magnolia Dr',
         beds: '3',
@@ -810,9 +810,9 @@ export async function seedDatabase(db: Database): Promise<void> {
       },
     },
     {
-      contact: 'Marcus Webb',
+      contact: 'Sam Smith',
       values: {
-        full_name: 'Marcus Webb',
+        full_name: 'Sam Smith',
         phone: '+16785550142',
         address: '482 Oakland Ave',
         beds: '2',
@@ -893,7 +893,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Marcus is on the monthly management retainer.
   await subscriptions.create({
     productId: retainer.id,
-    contactId: contactIdByName['Marcus Webb'] ?? null,
+    contactId: contactIdByName['Sam Smith'] ?? null,
     name: retainer.name,
     amountCents: retainer.price_cents,
     currency: retainer.currency,
@@ -903,7 +903,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Tanya kept the annual package even after it was retired from the catalog.
   await subscriptions.create({
     productId: legacyPackage.id,
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     name: legacyPackage.name,
     amountCents: legacyPackage.price_cents,
     currency: legacyPackage.currency,
@@ -913,7 +913,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Derek paused his retainer while he is between properties.
   const derekRetainer = await subscriptions.create({
     productId: retainer.id,
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
     name: retainer.name,
     amountCents: retainer.price_cents,
     currency: retainer.currency,
@@ -924,7 +924,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Tanya's earlier month-to-month retainer was canceled when she moved to annual.
   const tanyaOldRetainer = await subscriptions.create({
     productId: retainer.id,
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     name: retainer.name,
     amountCents: retainer.price_cents,
     currency: retainer.currency,
@@ -1003,14 +1003,14 @@ export async function seedDatabase(db: Database): Promise<void> {
   // the contact's timeline, mirroring the live routes.
   const invoices = new InvoicesRepo(db, locId)
 
-  // 1) Paid — Marcus Webb's inspection, sent then settled by card ($265.00).
+  // 1) Paid — Sam Smith's inspection, sent then settled by card ($265.00).
   const inv1Items = [
     { description: 'Property inspection — 482 Oakland Ave', quantity: 1, unit_amount: 25_000 },
     { description: 'Travel', quantity: 1, unit_amount: 1_500 },
   ]
   const inv1 = await invoices.create({
     number: await invoices.nextNumber(),
-    contactId: contactIdByName['Marcus Webb'] ?? null,
+    contactId: contactIdByName['Sam Smith'] ?? null,
     items: inv1Items,
     notes: 'Thanks for your business.',
     dueAt: iso(at(-3, 9)),
@@ -1034,12 +1034,12 @@ export async function seedDatabase(db: Database): Promise<void> {
     })
   }
 
-  // 2) Sent — Tanya Okafor's consultation, awaiting payment ($150.00). This is
+  // 2) Sent — Taylor Reed's consultation, awaiting payment ($150.00). This is
   // the one "outstanding" row, so the outstanding KPI reads exactly its total.
   const inv2Items = [{ description: 'Cash-offer consultation', quantity: 1, unit_amount: 15_000 }]
   const inv2 = await invoices.create({
     number: await invoices.nextNumber(),
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     items: inv2Items,
     dueAt: iso(at(10, 9)),
   })
@@ -1054,12 +1054,12 @@ export async function seedDatabase(db: Database): Promise<void> {
     })
   }
 
-  // 3) Draft — Derek Sull's duplex inspection, not yet sent ($400.00). A draft
+  // 3) Draft — Jordan Doe's duplex inspection, not yet sent ($400.00). A draft
   // hasn't reached the contact, so it logs no timeline activity and is excluded
   // from the outstanding KPI.
   await invoices.create({
     number: await invoices.nextNumber(),
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
     items: [
       { description: 'Duplex inspection — 5th St', quantity: 1, unit_amount: 30_000 },
       { description: 'Re-inspection follow-up', quantity: 1, unit_amount: 10_000 },
@@ -1081,7 +1081,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     items: { description: string; quantity: number; unit_amount: number }[]
   }[] = [
     {
-      contact: 'Marcus Webb',
+      contact: 'Sam Smith',
       method: 'bank_transfer',
       daysAgo: 4,
       items: [
@@ -1090,13 +1090,13 @@ export async function seedDatabase(db: Database): Promise<void> {
       ],
     },
     {
-      contact: 'Tanya Okafor',
+      contact: 'Taylor Reed',
       method: 'cash',
       daysAgo: 8,
       items: [{ description: 'Pre-listing walkthrough', quantity: 1, unit_amount: 12_000 }],
     },
     {
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       method: 'check',
       daysAgo: 23,
       items: [
@@ -1105,7 +1105,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       ],
     },
     {
-      contact: 'Marcus Webb',
+      contact: 'Sam Smith',
       method: 'card',
       daysAgo: 39,
       items: [{ description: 'Foundation inspection — Maple Ct', quantity: 1, unit_amount: 28_000 }],
@@ -1150,13 +1150,13 @@ export async function seedDatabase(db: Database): Promise<void> {
     terms: 'Valid for 30 days. Month-to-month after setup; cancel anytime with 30 days notice.',
   }
   const propTanya = await proposals.create({
-    title: 'Marketing management — Tanya Okafor',
+    title: 'Marketing management — Taylor Reed',
     slug: 'tanya-management',
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     content: propTanyaContent,
   })
   await proposals.markSent(propTanya.id)
-  await proposals.sign(propTanya.id, 'Tanya Okafor')
+  await proposals.sign(propTanya.id, 'Taylor Reed')
   if (propTanya.contact_id) {
     await timeline.add({
       contactId: propTanya.contact_id,
@@ -1170,7 +1170,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       type: 'proposal_signed',
       refTable: 'proposals',
       refId: propTanya.id,
-      payload: { proposal: propTanya.slug, signer_name: 'Tanya Okafor' },
+      payload: { proposal: propTanya.slug, signer_name: 'Taylor Reed' },
     })
   }
 
@@ -1187,9 +1187,9 @@ export async function seedDatabase(db: Database): Promise<void> {
     terms: 'Valid for 30 days. Month-to-month after setup; cancel anytime with 30 days notice.',
   }
   const propMarcus = await proposals.create({
-    title: 'Growth proposal — Marcus Webb',
+    title: 'Growth proposal — Sam Smith',
     slug: 'marcus-growth',
-    contactId: contactIdByName['Marcus Webb'] ?? null,
+    contactId: contactIdByName['Sam Smith'] ?? null,
     content: propMarcusContent,
   })
   await proposals.markSent(propMarcus.id)
@@ -1206,9 +1206,9 @@ export async function seedDatabase(db: Database): Promise<void> {
   // 3) Draft — Derek's proposal, not yet sent. A draft hasn't reached the contact,
   //    so it logs no timeline activity and its public link is a 404 until sent.
   await proposals.create({
-    title: 'Foundation proposal — Derek Sull',
+    title: 'Foundation proposal — Jordan Doe',
     slug: 'derek-foundation',
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
     content: {
       intro: 'Draft — confirm scope on our next call before sending.',
       line_items: [{ description: 'Foundation setup (one-time)', quantity: 1, unit_amount: 150000 }],
@@ -1226,9 +1226,9 @@ export async function seedDatabase(db: Database): Promise<void> {
   const reviewRequests = new ReviewRequestsRepo(db, locId)
   const reviews = new ReviewsRepo(db, locId)
 
-  // 1) Marcus Webb — asked by SMS, left 5 stars. Request → review → completed.
+  // 1) Sam Smith — asked by SMS, left 5 stars. Request → review → completed.
   const rqMarcus = await reviewRequests.create({
-    contactId: contactIdByName['Marcus Webb'] ?? null,
+    contactId: contactIdByName['Sam Smith'] ?? null,
     channel: 'sms',
     token: nanoid(),
   })
@@ -1245,8 +1245,8 @@ export async function seedDatabase(db: Database): Promise<void> {
     contactId: rqMarcus.contact_id,
     requestId: rqMarcus.id,
     rating: 5,
-    body: 'Jamal gave us a fair cash offer and closed in under two weeks. No surprises, no pressure.',
-    reviewerName: 'Marcus Webb',
+    body: 'Alex gave us a fair cash offer and closed in under two weeks. No surprises, no pressure.',
+    reviewerName: 'Sam Smith',
     source: 'direct',
   })
   await reviewRequests.markCompleted(rqMarcus.id)
@@ -1260,9 +1260,9 @@ export async function seedDatabase(db: Database): Promise<void> {
     })
   }
 
-  // 2) Tanya Okafor — asked by SMS, left 5 stars.
+  // 2) Taylor Reed — asked by SMS, left 5 stars.
   const rqTanya = await reviewRequests.create({
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     channel: 'sms',
     token: nanoid(),
   })
@@ -1279,8 +1279,8 @@ export async function seedDatabase(db: Database): Promise<void> {
     contactId: rqTanya.contact_id,
     requestId: rqTanya.id,
     rating: 5,
-    body: 'Smooth process from the first call to closing. Jamal answered every question quickly.',
-    reviewerName: 'Tanya Okafor',
+    body: 'Smooth process from the first call to closing. Alex answered every question quickly.',
+    reviewerName: 'Taylor Reed',
     source: 'direct',
   })
   await reviewRequests.markCompleted(rqTanya.id)
@@ -1304,11 +1304,11 @@ export async function seedDatabase(db: Database): Promise<void> {
     source: 'direct',
   })
 
-  // 4) Derek Sull — asked, hasn't responded yet. Keeps the "awaiting" KPI at 1
+  // 4) Jordan Doe — asked, hasn't responded yet. Keeps the "awaiting" KPI at 1
   //    and the response rate honest (2 of 3 requests answered). Stable token so
   //    the public star-rating page has a fixed demo URL for screenshots.
   const rqDerek = await reviewRequests.create({
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
     channel: 'sms',
     token: 'demo-review-derek',
   })
@@ -1337,7 +1337,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   const playbook = await courses.create({
     title: 'Wholesaling Playbook',
     slug: 'wholesaling-playbook',
-    description: 'The exact steps Jamal uses to find, underwrite, and assign a cash deal.',
+    description: 'The exact steps Alex uses to find, underwrite, and assign a cash deal.',
     status: 'published',
   })
   const pbLessons = []
@@ -1366,12 +1366,12 @@ export async function seedDatabase(db: Database): Promise<void> {
     )
   }
 
-  // 1) Marcus Webb — mid-course (2 of 4 done = 50%). Stable token so the public
+  // 1) Sam Smith — mid-course (2 of 4 done = 50%). Stable token so the public
   //    course player has a fixed demo URL for screenshots.
   const enMarcus = await enrollments.create({
     courseId: playbook.id,
-    contactId: contactIdByName['Marcus Webb'] ?? null,
-    token: 'demo-course-jamal',
+    contactId: contactIdByName['Sam Smith'] ?? null,
+    token: 'demo-course-Alex',
   })
   if (enMarcus.contact_id) {
     await timeline.add({
@@ -1385,11 +1385,11 @@ export async function seedDatabase(db: Database): Promise<void> {
   await completions.add(enMarcus.id, pbLessons[0]!.id)
   await completions.add(enMarcus.id, pbLessons[1]!.id)
 
-  // 2) Tanya Okafor — finished every lesson (100%). Mirrors the public player's
+  // 2) Taylor Reed — finished every lesson (100%). Mirrors the public player's
   //    path: all completions land, then the enrollment flips to completed.
   const enTanya = await enrollments.create({
     courseId: playbook.id,
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
     token: nanoid(),
   })
   if (enTanya.contact_id) {
@@ -1413,11 +1413,11 @@ export async function seedDatabase(db: Database): Promise<void> {
     })
   }
 
-  // 3) Derek Sull — just enrolled, nothing finished yet (0%). An enrollee at 0
+  // 3) Jordan Doe — just enrolled, nothing finished yet (0%). An enrollee at 0
   //    pulls the course average down, as it honestly should.
   const enDerek = await enrollments.create({
     courseId: playbook.id,
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
     token: nanoid(),
   })
   if (enDerek.contact_id) {
@@ -1461,7 +1461,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   await blog.create({
     title: 'How a Cash Offer Actually Works, Start to Finish',
     slug: 'how-cash-offers-work',
-    author: 'Jamal Carter',
+    author: 'Alex Mercer',
     status: 'published',
     excerpt: 'From your first call to closing day — every step of a cash sale, with no surprises.',
     body: [
@@ -1476,7 +1476,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   await blog.create({
     title: 'Should You Sell Your House As-Is? Here\'s the Honest Math',
     slug: 'sell-as-is-honest-math',
-    author: 'Jamal Carter',
+    author: 'Alex Mercer',
     status: 'published',
     excerpt: 'Repairs, agent fees, and months on the market — what selling as-is actually saves you.',
     body: [
@@ -1489,7 +1489,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   await blog.create({
     title: 'Avoiding Foreclosure: Your Options Before It\'s Too Late',
     slug: 'avoiding-foreclosure-options',
-    author: 'Jamal Carter',
+    author: 'Alex Mercer',
     status: 'draft',
     excerpt: 'A draft in progress — the paths still open once you fall behind, and how much time each one buys.',
     body: 'Draft in progress. This post will walk through forbearance, short sales, and a cash sale as ways to stay ahead of a foreclosure timeline.',
@@ -1505,18 +1505,18 @@ export async function seedDatabase(db: Database): Promise<void> {
   const quote = await triggerLinks.create({
     name: 'Free Cash Offer Quote',
     slug: 'free-offer',
-    destinationUrl: 'https://jamalbuyshouses.example/cash-offer',
+    destinationUrl: 'https://acmehomebuyers.example/cash-offer',
   })
   const guide = await triggerLinks.create({
     name: 'Foreclosure Help Guide',
     slug: 'foreclosure-help',
-    destinationUrl: 'https://jamalbuyshouses.example/foreclosure-guide',
+    destinationUrl: 'https://acmehomebuyers.example/foreclosure-guide',
   })
   // Brand-new link, never opened — proves the list shows an honest zero.
   await triggerLinks.create({
     name: 'New Listing Alerts',
     slug: 'listing-alerts',
-    destinationUrl: 'https://jamalbuyshouses.example/alerts',
+    destinationUrl: 'https://acmehomebuyers.example/alerts',
   })
 
   // Real click rows, backdated so the activity feed and "last clicked" read
@@ -1527,12 +1527,12 @@ export async function seedDatabase(db: Database): Promise<void> {
   // backdated rows are inserted directly, the same way the pipeline/stage seed is.
   const hoursAgoIso = (h: number) => iso(new Date(now.getTime() - h * 3_600_000))
   const clickPlan: { link: TriggerLink; contact: string | null; hoursAgo: number }[] = [
-    { link: quote, contact: 'Marcus Webb', hoursAgo: 2 },
-    { link: quote, contact: 'Tanya Okafor', hoursAgo: 27 },
-    { link: quote, contact: 'Derek Sull', hoursAgo: 50 },
+    { link: quote, contact: 'Sam Smith', hoursAgo: 2 },
+    { link: quote, contact: 'Taylor Reed', hoursAgo: 27 },
+    { link: quote, contact: 'Jordan Doe', hoursAgo: 50 },
     { link: quote, contact: null, hoursAgo: 73 },
     { link: quote, contact: null, hoursAgo: 99 },
-    { link: guide, contact: 'Derek Sull', hoursAgo: 19 },
+    { link: guide, contact: 'Jordan Doe', hoursAgo: 19 },
     { link: guide, contact: null, hoursAgo: 64 },
   ]
   for (const c of clickPlan) {
@@ -1571,7 +1571,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     name: 'Cash Offer Insiders',
     slug: 'cash-offer-insiders',
     description:
-      'A private space for homeowners and investors working with Jamal — wins, walkthroughs, and straight answers about selling for cash.',
+      'A private space for homeowners and investors working with Alex — wins, walkthroughs, and straight answers about selling for cash.',
     status: 'published',
   })
 
@@ -1585,11 +1585,11 @@ export async function seedDatabase(db: Database): Promise<void> {
   const wins = await channels.create({ communityId: insiders.id, name: 'Wins', slug: 'wins', position: 1 })
   const questions = await channels.create({ communityId: insiders.id, name: 'Q&A', slug: 'qa', position: 2 })
 
-  // Members: Jamal as the admin host (no CRM contact), and three real seed
+  // Members: Alex as the admin host (no CRM contact), and three real seed
   // contacts brought into the space so a member can author a post or a comment.
-  const coachJamal = await communityMembers.create({ communityId: insiders.id, name: 'Coach Jamal', role: 'admin' })
+  const coachAlex = await communityMembers.create({ communityId: insiders.id, name: 'Coach Alex', role: 'admin' })
   const memberByContact: Record<string, string> = {}
-  for (const name of ['Marcus Webb', 'Tanya Okafor', 'Derek Sull']) {
+  for (const name of ['Sam Smith', 'Taylor Reed', 'Jordan Doe']) {
     const member = await communityMembers.create({
       communityId: insiders.id,
       name,
@@ -1604,7 +1604,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   await communityPosts.create({
     communityId: insiders.id,
     channelId: announcements.id,
-    memberId: coachJamal.id,
+    memberId: coachAlex.id,
     title: 'Welcome to the Insiders space',
     body: [
       'Glad you are here. This is where I post walkthroughs, answer questions, and where members share how their sale went.',
@@ -1617,21 +1617,21 @@ export async function seedDatabase(db: Database): Promise<void> {
   const tanyaWin = await communityPosts.create({
     communityId: insiders.id,
     channelId: wins.id,
-    memberId: memberByContact['Tanya Okafor'] ?? null,
+    memberId: memberByContact['Taylor Reed'] ?? null,
     title: 'Closed in 11 days — no repairs',
-    body: 'Just wanted to share that we closed on the house in eleven days. No repairs, no showings, no agent fees. Exactly what was promised. Thank you Jamal.',
+    body: 'Just wanted to share that we closed on the house in eleven days. No repairs, no showings, no agent fees. Exactly what was promised. Thank you Alex.',
   })
-  await communityLikes.add(tanyaWin.id, coachJamal.id)
-  if (memberByContact['Marcus Webb']) await communityLikes.add(tanyaWin.id, memberByContact['Marcus Webb'])
+  await communityLikes.add(tanyaWin.id, coachAlex.id)
+  if (memberByContact['Sam Smith']) await communityLikes.add(tanyaWin.id, memberByContact['Sam Smith'])
   await communityComments.create({
     postId: tanyaWin.id,
-    memberId: coachJamal.id,
+    memberId: coachAlex.id,
     body: 'So happy for you, Tanya. You made the whole thing easy on your end too.',
   })
-  if (memberByContact['Marcus Webb']) {
+  if (memberByContact['Sam Smith']) {
     await communityComments.create({
       postId: tanyaWin.id,
-      memberId: memberByContact['Marcus Webb'],
+      memberId: memberByContact['Sam Smith'],
       body: 'This is encouraging — I have a similar timeline in mind.',
     })
   }
@@ -1640,16 +1640,16 @@ export async function seedDatabase(db: Database): Promise<void> {
   const marcusQuestion = await communityPosts.create({
     communityId: insiders.id,
     channelId: questions.id,
-    memberId: memberByContact['Marcus Webb'] ?? null,
+    memberId: memberByContact['Sam Smith'] ?? null,
     title: 'How do you handle a tenant-occupied property?',
     body: 'I have a duplex with tenants on a lease that runs into the spring. Can you still make a cash offer on something that is occupied?',
   })
   await communityComments.create({
     postId: marcusQuestion.id,
-    memberId: coachJamal.id,
+    memberId: coachAlex.id,
     body: 'Absolutely. We buy tenant-occupied all the time — the lease just transfers with the sale. Happy to walk through the specifics on a call.',
   })
-  if (memberByContact['Derek Sull']) await communityLikes.add(marcusQuestion.id, memberByContact['Derek Sull'])
+  if (memberByContact['Jordan Doe']) await communityLikes.add(marcusQuestion.id, memberByContact['Jordan Doe'])
 
   // A second community left in draft — an honest "not published yet" on the list,
   // and a 404 on the public feed until the operator flips it live.
@@ -1670,9 +1670,9 @@ export async function seedDatabase(db: Database): Promise<void> {
   const socialAccounts = new SocialAccountsRepo(db, locId)
   const socialPosts = new SocialPostsRepo(db, locId)
 
-  const fbAccount = await socialAccounts.create({ platform: 'facebook', handle: 'Jamal Buys Houses' })
-  const igAccount = await socialAccounts.create({ platform: 'instagram', handle: '@jamalbuyshouses' })
-  const gbpAccount = await socialAccounts.create({ platform: 'google_business', handle: 'Jamal Buys Houses' })
+  const fbAccount = await socialAccounts.create({ platform: 'facebook', handle: 'Acme Home Buyers' })
+  const igAccount = await socialAccounts.create({ platform: 'instagram', handle: '@acmehomebuyers' })
+  const gbpAccount = await socialAccounts.create({ platform: 'google_business', handle: 'Acme Home Buyers' })
 
   // Two posts already published (past dates, recorded in our ledger).
   const closedPost = await socialPosts.create({
@@ -1730,29 +1730,29 @@ export async function seedDatabase(db: Database): Promise<void> {
     name: 'Partner Referral Program',
     commissionType: 'percent',
     commissionValue: 10,
-    landingUrl: 'https://jamalbuyshouses.example/cash-offer',
+    landingUrl: 'https://acmehomebuyers.example/cash-offer',
   })
 
   const marcusAff = await affiliates.create({
     programId: program.id,
-    name: 'Marcus Webb',
+    name: 'Sam Smith',
     email: 'marcus.webb@example.com',
     code: 'MARCUSWEBB',
-    contactId: contactIdByName['Marcus Webb'] ?? null,
+    contactId: contactIdByName['Sam Smith'] ?? null,
   })
   const tanyaAff = await affiliates.create({
     programId: program.id,
-    name: 'Tanya Okafor',
+    name: 'Taylor Reed',
     email: 'tanya.okafor@example.com',
     code: 'TANYAO',
-    contactId: contactIdByName['Tanya Okafor'] ?? null,
+    contactId: contactIdByName['Taylor Reed'] ?? null,
   })
   const derekAff = await affiliates.create({
     programId: program.id,
-    name: 'Derek Sull',
+    name: 'Jordan Doe',
     email: 'derek.sull@example.com',
     code: 'DEREKS',
-    contactId: contactIdByName['Derek Sull'] ?? null,
+    contactId: contactIdByName['Jordan Doe'] ?? null,
   })
   // A brand-new partner with no linked CRM contact and nothing recorded — proves
   // the manager shows an honest zero, not a fabricated head start.
@@ -1766,7 +1766,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   // Real referral-link visits, backdated. Most are anonymous prospects; one is a
   // known CRM contact who clicked (attributed via ?c= in the live route).
   const refClickPlan: { aff: string; contact: string | null; hoursAgo: number }[] = [
-    { aff: marcusAff.id, contact: 'Tanya Okafor', hoursAgo: 5 },
+    { aff: marcusAff.id, contact: 'Taylor Reed', hoursAgo: 5 },
     { aff: marcusAff.id, contact: null, hoursAgo: 14 },
     { aff: marcusAff.id, contact: null, hoursAgo: 28 },
     { aff: marcusAff.id, contact: null, hoursAgo: 41 },
@@ -1804,7 +1804,7 @@ export async function seedDatabase(db: Database): Promise<void> {
   }[] = [
     {
       aff: marcusAff.id,
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       description: 'Cash sale — 2BR bungalow on Maple',
       amountCents: 450_000,
       status: 'paid',
@@ -1875,7 +1875,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     hoursAgo: number
   }[] = [
     {
-      contact: 'Marcus Webb',
+      contact: 'Sam Smith',
       direction: 'outbound',
       from: '+14805550100',
       to: '+16025550123',
@@ -1889,7 +1889,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       hoursAgo: 3,
     },
     {
-      contact: 'Tanya Okafor',
+      contact: 'Taylor Reed',
       direction: 'outbound',
       from: '+14805550100',
       to: '+16025550177',
@@ -1897,20 +1897,20 @@ export async function seedDatabase(db: Database): Promise<void> {
       durationSeconds: 143,
       recordingUrl: 'https://storage.vapi.example/recordings/call_vapi_demo_tanya.wav',
       transcript:
-        'AI: Hi Tanya, this is the assistant for Jamal — Cash Offers, following up on your request about the house on 7th Street. Is now still a good time?\n' +
+        'AI: Hi Tanya, this is the assistant for Alex — Cash Offers, following up on your request about the house on 7th Street. Is now still a good time?\n' +
         'Tanya: Sure, I have a few minutes.\n' +
-        'AI: Great. Jamal reviewed the photos you sent and would like to walk the property before confirming an offer. Would Thursday afternoon or Friday morning work better?\n' +
+        'AI: Great. Alex reviewed the photos you sent and would like to walk the property before confirming an offer. Would Thursday afternoon or Friday morning work better?\n' +
         'Tanya: Friday morning works.\n' +
-        'AI: Perfect — I have you down for Friday at 10am. Jamal confirms every offer personally after the walkthrough, so there is nothing to sign before then.\n' +
+        'AI: Perfect — I have you down for Friday at 10am. Alex confirms every offer personally after the walkthrough, so there is nothing to sign before then.\n' +
         'Tanya: Sounds good, thank you.',
       summary:
-        'Tanya confirmed a Friday 10am walkthrough for the 7th Street property. No offer amount was quoted; Jamal confirms personally after the visit.',
+        'Tanya confirmed a Friday 10am walkthrough for the 7th Street property. No offer amount was quoted; Alex confirms personally after the visit.',
       provider: 'vapi',
       externalId: 'call_vapi_demo_tanya',
       hoursAgo: 26,
     },
     {
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       direction: 'inbound',
       from: '+16025550161',
       to: '+14805550100',
@@ -1924,7 +1924,7 @@ export async function seedDatabase(db: Database): Promise<void> {
       hoursAgo: 49,
     },
     {
-      contact: 'Derek Sull',
+      contact: 'Jordan Doe',
       direction: 'outbound',
       from: '+14805550100',
       to: '+16025550161',
@@ -1976,4 +1976,5 @@ if (entry && import.meta.url === pathToFileURL(entry).href) {
   console.log('openlevel: seeded demo tenant (admin@acmecorp.com / openlevel)')
   await pool.end()
 }
+
 

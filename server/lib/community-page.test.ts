@@ -8,9 +8,9 @@ import {
 
 function feedOpts(over: Partial<CommunityFeedOpts> = {}): CommunityFeedOpts {
   return {
-    businessName: 'Jamal Fitness',
+    businessName: 'Alex Fitness',
     brandColor: '#16a34a',
-    loc: 'loc_jamal',
+    loc: 'loc_alex',
     slug: 'inner-circle',
     communityName: 'Inner Circle',
     description: 'A space for members.',
@@ -57,8 +57,8 @@ test('feed renders an All chip plus each channel with its post count', () => {
   expect(html).toContain('General')
   expect(html).toContain('Wins')
   // channel chips link to the per-channel feed
-  expect(html).toContain('/api/public/communities/loc_jamal/inner-circle/c/general')
-  expect(html).toContain('/api/public/communities/loc_jamal/inner-circle/c/wins')
+  expect(html).toContain('/api/public/communities/loc_alex/inner-circle/c/general')
+  expect(html).toContain('/api/public/communities/loc_alex/inner-circle/c/wins')
 })
 
 test('feed marks the active channel chip as on', () => {
@@ -70,7 +70,7 @@ test('feed marks the active channel chip as on', () => {
 test('feed shows a Pinned badge and links each post to its permalink', () => {
   const html = renderCommunityFeed(feedOpts())
   expect(html).toContain('Pinned')
-  expect(html).toContain('/api/public/communities/loc_jamal/inner-circle/p/p1')
+  expect(html).toContain('/api/public/communities/loc_alex/inner-circle/p/p1')
   expect(html).toContain('Hit my goal!')
 })
 
@@ -175,9 +175,9 @@ test('feed truncates a long post body with an ellipsis in the excerpt', () => {
 
 function postOpts(over: Partial<CommunitySinglePostOpts> = {}): CommunitySinglePostOpts {
   return {
-    businessName: 'Jamal Fitness',
+    businessName: 'Alex Fitness',
     brandColor: '#16a34a',
-    loc: 'loc_jamal',
+    loc: 'loc_alex',
     slug: 'inner-circle',
     communityName: 'Inner Circle',
     post: {
@@ -191,7 +191,7 @@ function postOpts(over: Partial<CommunitySinglePostOpts> = {}): CommunitySingleP
       comments: 2,
     },
     comments: [
-      { authorName: 'Coach Jamal', body: 'Proud of you!', createdAt: '2026-06-01T01:00:00.000Z' },
+      { authorName: 'Coach Alex', body: 'Proud of you!', createdAt: '2026-06-01T01:00:00.000Z' },
       { authorName: 'Sam', body: 'Inspiring.', createdAt: '2026-06-01T02:00:00.000Z' },
     ],
     ...over,
@@ -202,14 +202,14 @@ test('single post renders the full body as paragraphs and a back link to the fee
   const html = renderCommunityPost(postOpts())
   expect(html).toContain('Down 10 pounds this month.')
   expect(html).toContain('Thanks coach.')
-  expect(html).toContain('/api/public/communities/loc_jamal/inner-circle"')
+  expect(html).toContain('/api/public/communities/loc_alex/inner-circle"')
   expect(html).toContain('Inner Circle')
 })
 
 test('single post lists comments with their authors in the given (oldest-first) order', () => {
   const html = renderCommunityPost(postOpts())
   expect(html).toContain('2 comments')
-  expect(html).toContain('Coach Jamal')
+  expect(html).toContain('Coach Alex')
   expect(html).toContain('Proud of you!')
   expect(html).toContain('Sam')
   expect(html.indexOf('Proud of you!')).toBeLessThan(html.indexOf('Inspiring.'))
@@ -235,3 +235,4 @@ test('not-found page is a self-contained document', () => {
   expect(html).toContain('<!doctype html>')
   expect(html).toContain('not available')
 })
+

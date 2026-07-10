@@ -49,12 +49,12 @@ test('listByContact scopes to location and orders open-first, soonest due, newes
 
 test('listForLocation joins the contact name and orders open-first across contacts', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ id: 't1', contact_name: 'Marcus Webb' }])
+  db.enqueue([{ id: 't1', contact_name: 'Sam Smith' }])
   const repo = new ContactTasksRepo(db, 'locA')
 
   const rows = await repo.listForLocation()
 
-  expect(rows[0]?.contact_name).toBe('Marcus Webb')
+  expect(rows[0]?.contact_name).toBe('Sam Smith')
   const sql = db.calls[0]?.sql ?? ''
   expect(sql).toMatch(/FROM contact_tasks t/i)
   expect(sql).toMatch(/JOIN contacts c ON c\.id = t\.contact_id/i)
@@ -168,3 +168,4 @@ test('remove through the wrong contact matches nothing and returns false', async
 
   expect(await repo.remove('c2', 't1')).toBe(false)
 })
+

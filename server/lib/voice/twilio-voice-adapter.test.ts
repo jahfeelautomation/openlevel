@@ -41,13 +41,13 @@ describe('twilio voice adapter: placeCall', () => {
 
   it('requests status callbacks when a callback URL is configured', async () => {
     const fetchImpl = okFetch({ sid: 'CA_fake_124' })
-    const twilio = adapter({ fetchImpl, statusCallbackUrl: 'https://app.example.com/api/public/voice/jamal/twilio' })
+    const twilio = adapter({ fetchImpl, statusCallbackUrl: 'https://app.example.com/api/public/voice/Alex/twilio' })
 
     await twilio.placeCall({ to: '+16025550123' })
 
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     const body = new URLSearchParams(String(init.body))
-    expect(body.get('StatusCallback')).toBe('https://app.example.com/api/public/voice/jamal/twilio')
+    expect(body.get('StatusCallback')).toBe('https://app.example.com/api/public/voice/Alex/twilio')
     expect(body.get('StatusCallbackMethod')).toBe('POST')
     expect(body.getAll('StatusCallbackEvent')).toEqual(['initiated', 'ringing', 'answered', 'completed'])
   })
@@ -77,7 +77,7 @@ describe('twilio voice adapter: placeCall', () => {
 })
 
 describe('twilio voice adapter: verifyWebhook', () => {
-  const url = 'https://app.example.com/api/public/voice/jamal/twilio'
+  const url = 'https://app.example.com/api/public/voice/Alex/twilio'
   const rawBody = 'CallSid=CA_fake_123&CallStatus=completed&To=%2B16025550123&From=%2B14805550111'
 
   function sign(deliveredUrl: string, body: string, token: string): string {
@@ -135,3 +135,4 @@ describe('twilio voice adapter: parseEvent', () => {
     expect(twilio.parseEvent('CallSid=CA_5')).toEqual({ type: 'ignored' })
   })
 })
+

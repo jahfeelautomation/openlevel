@@ -65,7 +65,7 @@ test('send posts to chatwoot, persists outbound message + timeline, touches conv
     {
       location_id: 'locA',
       inbox_id: '7',
-      config: { baseUrl: 'https://chat', accountId: '1', tokenSecretName: 'jamal:chatwoot:api_token' },
+      config: { baseUrl: 'https://chat', accountId: '1', tokenSecretName: 'Alex:chatwoot:api_token' },
     },
   ]) // getForLocation
   db.enqueue([{ id: 'm-out', direction: 'outbound' }]) // insertOutbound
@@ -110,3 +110,4 @@ test('send is 400 when the location has no chatwoot channel', async () => {
   const res = await postJson(harness(db, { resolveSecret: () => 'tok' }), '/conv1/messages', { body: 'x' })
   expect(res.status).toBe(400)
 })
+

@@ -72,7 +72,7 @@ CREATE INDEX recipients_by_campaign ON campaign_recipients(location_id, campaign
 
 ## Seed
 
-Two demo campaigns on the Jamal tenant: one **sent** ("May cash-offer blast", SMS,
+Two demo campaigns on the Alex tenant: one **sent** ("May cash-offer blast", SMS,
 all contacts, 3/3) and one **draft** ("Spring seller check-in", email, tag
 `seller`). Tag a couple of seed contacts `seller` so audience filtering shows real
 numbers.
@@ -82,3 +82,4 @@ numbers.
 Scheduled/recurring sends, real carrier/email delivery, drip sequences
 (that's Automations), open/click tracking, per-recipient timeline events,
 unsubscribe handling.
+

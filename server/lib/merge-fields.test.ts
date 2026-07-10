@@ -1,13 +1,13 @@
 import { MERGE_FIELDS, renderTemplate } from './merge-fields'
 
-const derek = { first_name: 'Derek', last_name: 'Sull', name: 'Derek Sull' }
+const derek = { first_name: 'Derek', last_name: 'Sull', name: 'Jordan Doe' }
 
 test('substitutes first_name', () => {
   expect(renderTemplate('Hi {{first_name}}, welcome!', derek)).toBe('Hi Derek, welcome!')
 })
 
 test('substitutes several tokens including full name and last_name', () => {
-  expect(renderTemplate('{{name}} ({{last_name}})', derek)).toBe('Derek Sull (Sull)')
+  expect(renderTemplate('{{name}} ({{last_name}})', derek)).toBe('Jordan Doe (Sull)')
 })
 
 test('tolerates whitespace and case inside the braces', () => {
@@ -81,3 +81,4 @@ test('a 2-arg call leaves every custom_values token verbatim (back-compat)', () 
     'Hi Derek {{custom_values.x}}',
   )
 })
+

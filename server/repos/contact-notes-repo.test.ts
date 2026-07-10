@@ -6,7 +6,7 @@ test('create inserts a note scoped to the location', async () => {
   db.enqueue([{ id: 'n1', location_id: 'locA', contact_id: 'c1', body: 'Called, left a voicemail' }])
   const repo = new ContactNotesRepo(db, 'locA')
 
-  const note = await repo.create({ contactId: 'c1', body: 'Called, left a voicemail', author: 'JF' })
+  const note = await repo.create({ contactId: 'c1', body: 'Called, left a voicemail', author: 'AL' })
 
   expect(note.id).toBe('n1')
   expect(db.calls[0]?.sql).toMatch(/INSERT INTO contact_notes/i)
@@ -14,7 +14,7 @@ test('create inserts a note scoped to the location', async () => {
   expect(db.calls[0]?.params[0]).toBe('locA') // location_id ($1)
   expect(db.calls[0]?.params[2]).toBe('c1') // contact_id
   expect(db.calls[0]?.params[3]).toBe('Called, left a voicemail') // body
-  expect(db.calls[0]?.params[4]).toBe('JF') // author
+  expect(db.calls[0]?.params[4]).toBe('AL') // author
 })
 
 test('create defaults a missing author to null', async () => {
@@ -115,3 +115,4 @@ test('remove through the wrong contact matches nothing and returns false', async
 
   expect(await repo.remove('c2', 'n1')).toBe(false)
 })
+

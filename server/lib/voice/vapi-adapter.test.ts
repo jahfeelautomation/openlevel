@@ -52,7 +52,7 @@ describe('vapi adapter: verifyWebhook', () => {
   const input = (secret?: string) => ({
     rawBody: '{}',
     headers: secret === undefined ? {} : { 'x-vapi-secret': secret },
-    url: 'https://app.example.com/api/public/voice/jamal/vapi',
+    url: 'https://app.example.com/api/public/voice/Alex/vapi',
   })
 
   it('accepts only a delivery that echoes the configured server secret', () => {
@@ -156,3 +156,4 @@ describe('vapi adapter: parseEvent', () => {
     ).toEqual({ type: 'ignored' })
   })
 })
+

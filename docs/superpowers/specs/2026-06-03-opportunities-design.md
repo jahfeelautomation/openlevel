@@ -3,7 +3,7 @@
 **Goal:** GHL-grade Opportunities: pipelines with ordered stages and a kanban
 board of opportunity cards you can drag between stages, scoped per location.
 
-**Why:** Opportunities/pipelines are GHL's core CRM surface — the thing JF and
+**Why:** Opportunities/pipelines are GHL's core CRM surface — the thing AL and
 clients use to track deals (cash offers, jobs) from lead to won/lost.
 
 ## Scope (this slice)
@@ -63,3 +63,4 @@ custom fields on opportunities, forecasting/reporting, bulk actions.
 Co-located `*.test.ts` with `FakeDatabase` for repos/routes (assert tenancy:
 `location_id` first param on every query; move/create set it explicitly). Verify
 the board live with `npm run shoot` (add an `opportunities` shot) before commit.
+

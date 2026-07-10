@@ -32,7 +32,7 @@ test('create sets location $1, links request + contact, keeps the rating', async
     requestId: 'rq1',
     rating: 5,
     body: 'Fast and fair.',
-    reviewerName: 'Marcus Webb',
+    reviewerName: 'Sam Smith',
   })
   const params = db.calls[0]?.params
   expect(params?.[0]).toBe('locA') // location_id is $1
@@ -40,7 +40,7 @@ test('create sets location $1, links request + contact, keeps the rating', async
   expect(params).toContain('rq1')
   expect(params).toContain(5)
   expect(params).toContain('Fast and fair.')
-  expect(params).toContain('Marcus Webb')
+  expect(params).toContain('Sam Smith')
   expect(params).toContain('direct') // default source
   expect(params).toContain('published') // default status
 })
@@ -67,7 +67,7 @@ test('upsertExternal inserts scoped to the location, deduping on (location_id, s
     externalId: 'gr_1',
     rating: 5,
     body: 'Fast closing, fair price.',
-    reviewerName: 'Marcus Webb',
+    reviewerName: 'Sam Smith',
     createdAt: '2026-05-30T18:04:00Z',
   })
 
@@ -107,3 +107,4 @@ test('setStatus hides or restores a review scoped to location + id', async () =>
   expect(db.calls[0]?.sql).toMatch(/UPDATE reviews SET status=\$2/i)
   expect(db.calls[0]?.params).toEqual(['locA', 'hidden', 'rv1'])
 })
+

@@ -14,18 +14,18 @@ function postJson(app: ReturnType<typeof authRoute>, path: string, body: unknown
   })
 }
 
-const operatorRow = { id: 'op1', email: 'jf@x.com', name: 'JF', role: 'owner' }
+const operatorRow = { id: 'op1', email: 'AL@x.com', name: 'AL', role: 'owner' }
 
 test('login with the correct password sets an httpOnly session cookie', async () => {
   const password_hash = await hashPassword('pw')
   const db = new FakeDatabase()
   db.enqueue([{ ...operatorRow, password_hash }]) // findByEmail
   const res = await postJson(authRoute({ db, sessionSecret: secret }), '/login', {
-    email: 'jf@x.com',
+    email: 'AL@x.com',
     password: 'pw',
   })
   expect(res.status).toBe(200)
-  expect(await res.json()).toMatchObject({ ok: true, operator: { id: 'op1', email: 'jf@x.com' } })
+  expect(await res.json()).toMatchObject({ ok: true, operator: { id: 'op1', email: 'AL@x.com' } })
   const cookie = res.headers.get('set-cookie') ?? ''
   expect(cookie).toContain(`${SESSION_COOKIE}=`)
   expect(cookie.toLowerCase()).toContain('httponly')
@@ -36,7 +36,7 @@ test('login with the wrong password is 401 and sets no cookie', async () => {
   const db = new FakeDatabase()
   db.enqueue([{ ...operatorRow, password_hash }])
   const res = await postJson(authRoute({ db, sessionSecret: secret }), '/login', {
-    email: 'jf@x.com',
+    email: 'AL@x.com',
     password: 'nope',
   })
   expect(res.status).toBe(401)
@@ -95,3 +95,4 @@ test('logout clears the session cookie', async () => {
   expect(cookie).toContain(`${SESSION_COOKIE}=`)
   expect(cookie.toLowerCase()).toMatch(/max-age=0/)
 })
+

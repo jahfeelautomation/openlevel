@@ -45,7 +45,7 @@ function fakeSendText(result: SendTextResult = { ok: true, messageId: 'm1' }) {
   return { fn, calls }
 }
 
-const LOC = { id: 'locA', name: 'Jamal Co', slug: 'jamal', client_slug: 'jamal', branding: {}, settings: {} }
+const LOC = { id: 'locA', name: 'Alex Co', slug: 'Alex', client_slug: 'Alex', branding: {}, settings: {} }
 const TEXT_CONTACT = { id: 'c1', location_id: 'locA', name: 'Jane Doe', phones: ['+16025551234'], emails: [], tags: [] }
 
 test('answers an operator message, scoped to the location, returning the reply', async () => {
@@ -180,3 +180,4 @@ test('/confirm with send_text on a server with no rail reports it is not set up,
   expect(body.message).toMatch(/not set up|isn't set up/i)
   expect(body.message).not.toMatch(/sent your text/i)
 })
+

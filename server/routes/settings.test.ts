@@ -194,14 +194,14 @@ function sendingHarness(db: FakeDatabase, email: ResolvedEmailSender, sms: Resol
 
 test('GET /sending returns the choices plus honest per-channel readouts', async () => {
   const db = new FakeDatabase()
-  db.enqueue([{ settings: { sending: { emailProvider: 'brevo', fromEmail: 'jamal@deals.com', fromName: 'Jamal' } } }])
+  db.enqueue([{ settings: { sending: { emailProvider: 'brevo', fromEmail: 'Alex@deals.com', fromName: 'Alex' } } }])
   const res = await sendingHarness(db, EMAIL_OK, SMS_OFF).request('/sending')
 
   expect(res.status).toBe(200)
   expect(await res.json()).toEqual({
     emailProvider: 'brevo',
-    fromEmail: 'jamal@deals.com',
-    fromName: 'Jamal',
+    fromEmail: 'Alex@deals.com',
+    fromName: 'Alex',
     smsProvider: 'none',
     smsFrom: null,
     email: { connected: true },
@@ -464,3 +464,4 @@ test('PATCH /voice rejects an unknown provider and never accepts credentials', a
   expect(res2.status).toBe(200)
   expect(JSON.parse(db.calls[0]?.params[1] as string)).toEqual({})
 })
+

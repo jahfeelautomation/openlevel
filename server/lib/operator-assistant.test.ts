@@ -42,7 +42,7 @@ function toolUsingClaude(toolName: string, toolInput: Record<string, unknown> = 
   return { client, calls }
 }
 
-const LOC = { id: 'locA', name: 'Jamal Co', slug: 'jamal', client_slug: 'jamal', branding: {}, settings: {} }
+const LOC = { id: 'locA', name: 'Alex Co', slug: 'Alex', client_slug: 'Alex', branding: {}, settings: {} }
 
 test('answers with the per-client key + the operator (Sonnet) model, persisting nothing', async () => {
   const db = new FakeDatabase()
@@ -200,3 +200,4 @@ test('FUNCTIONAL: a write tool_use PROPOSES the change and the engine returns it
   // Still NO write in the chat turn: location + contact + calendar reads only.
   expect(db.calls.every((q) => !/INSERT|UPDATE|DELETE/i.test(q.sql))).toBe(true)
 })
+

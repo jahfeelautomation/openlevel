@@ -62,12 +62,12 @@ test('a signed proposal shows the real signer + date and NO sign form', () => {
   const html = renderProposalPage(
     makeProposal({
       status: 'signed',
-      signer_name: 'Jamal Carter',
+      signer_name: 'Alex Mercer',
       signed_at: '2026-06-03T12:00:00Z',
     }),
   )
   expect(html).toContain('Signed by')
-  expect(html).toContain('Jamal Carter')
+  expect(html).toContain('Alex Mercer')
   expect(html).toContain('June 3, 2026')
   // No way to sign again, and no client script on a finished proposal.
   expect(html).not.toContain('id="ol-proposal-form"')
@@ -119,3 +119,4 @@ test('renderProposalNotFound returns a styled, self-contained 404 page', () => {
   expect(html.startsWith('<!doctype html>')).toBe(true)
   expect(html).toContain('Page not found')
 })
+

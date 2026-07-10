@@ -22,7 +22,7 @@ async function setup() {
   await pg.exec(SCHEMA)
   const db = new PgliteDatabase(pg)
   const loc = 'loc_test'
-  await db.query("INSERT INTO locations (id, name, slug) VALUES ($1,'Jamal Fitness','jamal')", [loc])
+  await db.query("INSERT INTO locations (id, name, slug) VALUES ($1,'Alex Fitness','Alex')", [loc])
 
   const community = await new CommunitiesRepo(db, loc).create({
     name: 'Inner Circle',
@@ -36,7 +36,7 @@ async function setup() {
   const wins = await channelsRepo.create({ communityId: community.id, name: 'Wins', slug: 'wins', position: 1 })
 
   const membersRepo = new CommunityMembersRepo(db, loc)
-  const jamal = await membersRepo.create({ communityId: community.id, name: 'Coach Jamal', role: 'admin' })
+  const Alex = await membersRepo.create({ communityId: community.id, name: 'Coach Alex', role: 'admin' })
   const dana = await membersRepo.create({ communityId: community.id, name: 'Dana Reed' })
 
   const postsRepo = new CommunityPostsRepo(db, loc)
@@ -51,24 +51,24 @@ async function setup() {
   const general1 = await postsRepo.create({
     communityId: community.id,
     channelId: general.id,
-    memberId: jamal.id,
+    memberId: Alex.id,
     title: 'Welcome',
     body: 'Glad you are all here.',
   })
 
   // Real engagement on the pinned post: two likes, one comment.
   const likesRepo = new CommunityPostLikesRepo(db, loc)
-  await likesRepo.add(pinned.id, jamal.id)
+  await likesRepo.add(pinned.id, Alex.id)
   await likesRepo.add(pinned.id, dana.id)
   await new CommunityCommentsRepo(db, loc).create({
     postId: pinned.id,
-    memberId: jamal.id,
+    memberId: Alex.id,
     body: 'Proud of you!',
   })
 
   const app = new Hono<AppEnv>()
   app.route('/', publicCommunitiesRoute({ db }))
-  return { db, loc, app, community, general, wins, jamal, dana, pinned, general1 }
+  return { db, loc, app, community, general, wins, Alex, dana, pinned, general1 }
 }
 
 test('GET /:loc/:slug renders the published feed with derived counts and channels', async () => {
@@ -135,7 +135,7 @@ test('GET /:loc/:slug/p/:postId renders the post with its comment thread', async
   expect(html).toContain('Hit my goal!')
   expect(html).toContain('Down 10 pounds this month.')
   expect(html).toContain('Thanks coach.') // second paragraph
-  expect(html).toContain('Coach Jamal') // comment author
+  expect(html).toContain('Coach Alex') // comment author
   expect(html).toContain('Proud of you!') // comment body
   expect(html).toContain('1 comment')
   expect(html).toContain('2 likes')
@@ -159,3 +159,4 @@ test('GET /:loc/:slug/p/:postId is 404 for an unknown post id', async () => {
   const res = await app.request('/loc_test/inner-circle/p/nope')
   expect(res.status).toBe(404)
 })
+

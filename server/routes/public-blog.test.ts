@@ -19,8 +19,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
 
@@ -32,7 +32,7 @@ async function setup() {
     slug: 'buy-houses-cash',
     excerpt: 'The cash offer process, start to finish.',
     body: longBody,
-    author: 'Jamal',
+    author: 'Alex',
     status: 'published',
   })
   const live2 = await repo.create({
@@ -61,7 +61,7 @@ test('GET /:loc renders the branded index of published posts with a derived read
   expect(res.headers.get('content-type')).toContain('text/html')
   const html = await res.text()
   expect(html).toContain('<!doctype html>')
-  expect(html).toContain('Jamal — Cash Offers')
+  expect(html).toContain('Alex — Cash Offers')
   expect(html).toContain('How We Buy Houses For Cash')
   expect(html).toContain('Avoiding Foreclosure')
   expect(html).toContain('/api/public/blog/loc_test/buy-houses-cash')
@@ -90,7 +90,7 @@ test('GET /:loc/:slug renders a published post with its body, author and date', 
   expect(res.status).toBe(200)
   const html = await res.text()
   expect(html).toContain('How We Buy Houses For Cash')
-  expect(html).toContain('Jamal')
+  expect(html).toContain('Alex')
   expect(html).toContain('2 min read')
   // Back link to the index.
   expect(html).toContain('href="/api/public/blog/loc_test"')
@@ -118,3 +118,4 @@ test('a slug is scoped to its location — another location cannot read it', asy
   const res = await app.request('/loc_other/buy-houses-cash')
   expect(res.status).toBe(404)
 })
+

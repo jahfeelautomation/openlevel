@@ -548,7 +548,7 @@ function AddChannelDialog({
               id="channel-handle"
               value={handle}
               autoFocus
-              placeholder="e.g. @jamalbuyshouses"
+              placeholder="e.g. @acmehomebuyers"
               onChange={(e) => setHandle(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void add()
@@ -569,3 +569,4 @@ function AddChannelDialog({
     </div>
   )
 }
+

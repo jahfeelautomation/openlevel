@@ -13,20 +13,21 @@ function harness(db: FakeDatabase, operatorId = 'op1') {
   return app
 }
 
-const jamal = {
-  id: 'locJamal',
-  name: 'Jamal',
-  slug: 'jamal',
-  client_slug: 'jamal',
+const Alex = {
+  id: 'locAlex',
+  name: 'Alex',
+  slug: 'Alex',
+  client_slug: 'Alex',
   branding: {},
   settings: {},
 }
 
 test('lists only the locations the operator belongs to, scoped by operator id', async () => {
   const db = new FakeDatabase()
-  db.enqueue([jamal]) // listLocations join result
+  db.enqueue([Alex]) // listLocations join result
   const res = await harness(db).request('/')
   expect(res.status).toBe(200)
-  expect(await res.json()).toEqual({ locations: [jamal] })
+  expect(await res.json()).toEqual({ locations: [Alex] })
   expect(db.calls[0]?.params).toEqual(['op1'])
 })
+

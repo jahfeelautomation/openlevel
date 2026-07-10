@@ -36,7 +36,7 @@ const devClaude: ClaudeClient = {
     const ask = typeof lastUser?.content === 'string' ? lastUser.content.trim() : ''
     const text =
       `Thanks for reaching out${ask ? ` about "${ask.slice(0, 50)}${ask.length > 50 ? '…' : ''}"` : ''}! ` +
-      `I'd love to help. What's the best number and time to reach you? — Jamal`
+      `I'd love to help. What's the best number and time to reach you? — Alex`
     return { stopReason: 'end_turn', content: [{ type: 'text', text }] }
   },
 }
@@ -54,7 +54,7 @@ const devSendMessage: typeof sendChatwootMessage = async () => {
  * SMS). Dev-only; prod fires workflows on real trigger events instead.
  */
 async function prerunWelcomeWorkflow(db: PgliteDatabase): Promise<void> {
-  const locationId = 'loc_jamal'
+  const locationId = 'loc_alex'
   const [workflow] = await db.query<{ id: string }>(
     "SELECT id FROM workflows WHERE location_id = $1 AND name = 'New lead welcome' LIMIT 1",
     [locationId],
@@ -78,8 +78,8 @@ async function main() {
   const db = new PgliteDatabase(pg)
 
   // Dev secrets so the env-backed resolveSecret() finds them by name.
-  process.env.JAMAL_ANTHROPIC_API_KEY ||= 'dev-stub-anthropic-key'
-  process.env.JAMAL_CHATWOOT_API_TOKEN ||= 'dev-stub-chatwoot-token'
+  process.env.Alex_ANTHROPIC_API_KEY ||= 'dev-stub-anthropic-key'
+  process.env.Alex_CHATWOOT_API_TOKEN ||= 'dev-stub-chatwoot-token'
 
   await seedDatabase(db)
   await prerunWelcomeWorkflow(db)
@@ -108,4 +108,5 @@ main().catch((err) => {
   console.error(err)
   process.exit(1)
 })
+
 

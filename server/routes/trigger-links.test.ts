@@ -21,8 +21,8 @@ async function setup() {
   const loc = 'loc_test'
   await db.query('INSERT INTO locations (id, name, slug, branding) VALUES ($1,$2,$3,$4)', [
     loc,
-    'Jamal — Cash Offers',
-    'jamal',
+    'Alex — Cash Offers',
+    'Alex',
     { color: '#4f46e5' },
   ])
   await db.query(
@@ -157,3 +157,4 @@ test('GET /:id 404s for an unknown link', async () => {
   const res = await app.request('/nope')
   expect(res.status).toBe(404)
 })
+
