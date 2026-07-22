@@ -161,3 +161,20 @@ test('POST submit is 404 for a draft (unpublished) form', async () => {
   })
   expect(res.status).toBe(404)
 })
+
+test('OPTIONS submit allows the JahFeel marketing site to post JSON', async () => {
+  const { app } = await setup()
+  const res = await app.request('/loc_test/cash-offer/submit', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://jahfeelautomation.com',
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'content-type',
+    },
+  })
+
+  expect(res.status).toBe(204)
+  expect(res.headers.get('access-control-allow-origin')).toBe('https://jahfeelautomation.com')
+  expect(res.headers.get('access-control-allow-methods')).toContain('POST')
+  expect(res.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('content-type')
+})

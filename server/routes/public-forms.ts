@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { z } from 'zod'
 import type { AppEnv } from '../app-env'
 import type { Database } from '../db/database'
@@ -37,6 +38,16 @@ export function publicFormsRoute(deps: {
   dispatch?: WorkflowDispatch
 }): Hono<AppEnv> {
   const app = new Hono<AppEnv>()
+
+  app.use(
+    '*',
+    cors({
+      origin: ['https://jahfeelautomation.com', 'https://www.jahfeelautomation.com'],
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type'],
+      maxAge: 86400,
+    }),
+  )
 
   /** The location's branding color (for the CTA + accents), or undefined. */
   async function brandColor(loc: string): Promise<string | undefined> {
