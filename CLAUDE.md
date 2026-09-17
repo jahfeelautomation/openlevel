@@ -1,8 +1,8 @@
 # CLAUDE.md — Open Level
 
 ## Source of Truth
-The state of this project is linked to the global Second Brain. 
-Global reference: `C:\Users\Ghost\.openclaw\workspace\second-brain\projects\openlevel.md`
+Project notes live in shared memory (`C:\Users\bryan\.openclaw\workspace\ai-context\memory\`). Open the `project_openlevel_*` entries from `MEMORY-INDEX.md`, starting with `project_openlevel_scope_locked.md`.
+OpenLevel stays separate from the client portal: see D-46 in `ai-context\rules\DECISIONS_ACTIVE.md`.
 
 ## Architecture & Routing
 This project consists of two main clients that connect to a single backend API (mimicking GoHighLevel).
