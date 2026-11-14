@@ -1,0 +1,90 @@
+# Phase 0 pull-request CI (implementation of AUTOMATED_TESTING_PLAN.md §5).
+#
+# Jobs (parallel where independent):
+#   typecheck  — root + phase0 typechecks, no DB
+#   unit       — DB-free suites, no DB
+#   app-suite  — full application suite with vault known-failure baseline gate
+#   integration — test-env.ts orchestrated P1/P3/backpressure on Testcontainers
+# Artifacts upload always, even on failure. No secrets, no cloud resources.
+name: phase0
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npx tsc -p phase0/tsconfig.json --noEmit
+
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:phase0:unit
+
+  app-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: mkdir -p phase0/evidence
+      - name: full suite with JSON report
+        continue-on-error: true
+        run: npx vitest run --reporter=default --reporter=json --outputFile=phase0/evidence/app-suite.json
+      - name: known-failure baseline gate
+        # Decides the job: passes only if failures exactly match the baseline.
+        run: node phase0/baseline-gate.mjs phase0/evidence/app-suite.json phase0/vault-baseline.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-suite-evidence
+          path: phase0/evidence/app-suite.json
+          retention-days: 14
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Phase 0 integration proofs
+        run: npm run test:phase0:integration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase0-integration-evidence
+          path: phase0/evidence/
+          retention-days: 14

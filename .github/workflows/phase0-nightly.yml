@@ -1,0 +1,32 @@
+# Phase 0 extended reliability (AUTOMATED_TESTING_PLAN.md §6).
+# Nightly + manual dispatch. Advisory: never a required branch gate.
+# One orchestrated run: full suites, retained-database rerun, 20x SIGKILL.
+name: phase0-nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reliability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Reliability run (suites + rerun + 20x SIGKILL)
+        run: node --import tsx phase0/test-env.ts run --repeat-suites --sigkill-loop 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase0-nightly-evidence
+          path: phase0/evidence/
+          retention-days: 30

@@ -16,9 +16,15 @@
     "shoot": "node scripts/shoot.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:phase0": "node --import tsx phase0/test-env.ts run",
+    "test:phase0:unit": "vitest run --config phase0/vitest.phase0.config.ts phase0/db-guard.test.ts phase0/p1/outcome.test.ts phase0/test-env.test.ts phase0/baseline-gate.test.ts",
+    "test:phase0:integration": "node --import tsx phase0/test-env.ts run --no-unit",
+    "test:env:up": "node --import tsx phase0/test-env.ts up",
+    "test:env:down": "node --import tsx phase0/test-env.ts down"
   },
   "dependencies": {
+    "@dbos-inc/dbos-sdk": "5.5.0",
     "@electric-sql/pglite": "^0.5.1",
     "@hono/node-server": "^2.0.4",
     "@hono/zod-validator": "^0.8.0",
@@ -39,6 +45,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "12.2.1",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.16",
