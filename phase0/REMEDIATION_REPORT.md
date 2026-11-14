@@ -99,3 +99,22 @@ Static defects found by adversarial re-read and fixed in `phase0/`
 All P1/P3/backpressure DB tests, rerun-twice, 20× SIGKILL, listener/auth
 verification, and the final Phase 0 verdict. Nothing is marked PASS
 without execution.
+
+## Addendum — review3 implementation (2026-11-15)
+
+Triage: defect 1 (`/32` netmask) CONFIRMED via PostgreSQL docs history +
+code inspection — fixed. Defect 2 (bridge IP) plausible, unverified —
+answered with a recorded policy, not a guess. Sandbox-scope dispute
+resolved by scope labels, not retraction. Token offer DECLINED on the
+record (standing rule: no credentials in chat, no token handling);
+the CI re-run is the oracle instead.
+
+- `host(inet_server_addr())` in both live checks; pure
+  `classifyServerAddress` with 29 unit cases green.
+- Server-view policy: strict-loopback client URL (unchanged) +
+  loopback-or-RFC1918 server observation with mandatory logging;
+  public/null/malformed fail closed with observed-vs-expected detail.
+- Verdict docs scope-labeled to the agent sandbox session; matrix
+  B-UNIT row now 63/63 with GUARD-FIX row added.
+- Owner's local Gate C run (review3) is taken as context, not evidence:
+  only CI output and local unit runs enter the matrix.

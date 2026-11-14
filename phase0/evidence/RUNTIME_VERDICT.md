@@ -1,5 +1,12 @@
 # Container Runtime Verdict — prompt9 §3 (observed 2026-11-14T18:12Z)
 
+> Scope: observed from the **agent sandbox session** on the machine
+> described below. The Docker/Colima incompatibility verdicts rest on
+> vendor documentation, not session behavior, and stand regardless of
+> session. The bind/shmget/connect denials govern only sandboxed sessions;
+> an interactive owner-Mac session may legitimately differ
+> (cf. `docs/plans/review3.md`).
+
 Machine: macOS 12.7.6 (Monterey, build 21H1320 — Apple security support
 ended 2023), Intel x86_64 (i5-5250U), 4.0 GB RAM, 115 GB free disk.
 No container tooling present: no docker/podman/colima/lima binaries, apps,

@@ -1,5 +1,12 @@
 # Environment Establishment — review2 §1 (observed 2026-11-14)
 
+> Scope: this file records probes executed from the **agent sandbox
+> session**. A different session on different hardware (e.g. the owner's
+> interactive Mac session reported in `docs/plans/review3.md`) may
+> legitimately observe different capabilities. Neither observation
+> retroactively falsifies the other; each governs only the session that
+> made it.
+
 - Repo root: `/Users/sherwin/Documents/openlevel/openlevel`, branch `master`,
   commit `2634f8cd0eaccfdc9d589fad3fc967fd1b3ba0bb`.
 - Tree: `M .gitignore` (owner), `M package.json` + `M package-lock.json`

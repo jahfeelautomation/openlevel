@@ -15,7 +15,16 @@
  *  - Dangerous PG* env (PGSERVICE, PGSERVICEFILE, PGPASSFILE, PGOPTIONS)
  *    must be unset: they can redirect or alter the session.
  *  - Live verification on the actual connection: current_database(),
- *    inet_server_addr()/inet_server_port() must be loopback + URL port.
+ *    host(inet_server_addr())/inet_server_port() must satisfy the
+ *    server-view policy + URL port. NOTE: `inet` casts to text WITH a
+ *    netmask ('127.0.0.1/32'), so `host()` is mandatory (review3 defect 1).
+ *  - Server-view policy (review3 defect 2 decision): the client-side URL
+ *    must always be strict loopback (that proves operator intent), while
+ *    the server-side observed address additionally accepts RFC1918
+ *    private ranges — Docker port-forwarding legitimately presents the
+ *    bridge gateway (e.g. 172.17.0.1). Private-range acceptance is always
+ *    logged. Anything else (public, null/unix-socket, malformed) fails
+ *    closed with observed-vs-expected detail.
  *  - Never log credentials: errors carry redacted URLs only.
  */
 import { Pool } from 'pg';
@@ -99,6 +108,36 @@ export function assertDisposableUrl(url: string, sourceEnv: string): string {
   return parseTarget(url, sourceEnv).db;
 }
 
+export type ServerAddressVerdict = 'loopback' | 'private' | 'rejected';
+
+/**
+ * Classify a server-observed address (pure; unit-tested without a database).
+ * Accepts both `host()` form ('127.0.0.1') and raw inet text
+ * ('127.0.0.1/32') defensively — callers must still use `host()` so the
+ * database does the normalization, never string hope.
+ */
+export function classifyServerAddress(addr: string | null | undefined): ServerAddressVerdict {
+  if (addr === null || addr === undefined) return 'rejected';
+  const bare = addr
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    // Only host masks (/32, /128) are stripped: anything else is a network
+    // or malformed input and must not launder into an accepted address.
+    .replace(/\/(32|128)$/, '');
+  if (bare === '::1' || bare === 'localhost') return 'loopback';
+  const v4 = bare.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!v4) return 'rejected';
+  const octets = v4.slice(1).map(Number);
+  if (octets.some((o) => o > 255)) return 'rejected';
+  const [a, b] = octets as [number, number, number, number];
+  if (a === 127) return 'loopback';
+  if (a === 10) return 'private';
+  if (a === 172 && b >= 16 && b <= 31) return 'private';
+  if (a === 192 && b === 168) return 'private';
+  return 'rejected';
+}
+
 /** Connect, verify live identity, and return a pooled handle + report. */
 export async function connectGuarded(envVar = 'PHASE0_DATABASE_URL'): Promise<{ pool: Pool; report: GuardReport }> {
   const url = process.env[envVar] ?? '';
@@ -108,7 +147,7 @@ export async function connectGuarded(envVar = 'PHASE0_DATABASE_URL'): Promise<{ 
     const version = await pool.query('SHOW server_version');
     const current = await pool.query(
       `SELECT current_database() AS db, current_user AS usr,
-              inet_server_addr()::text AS addr, inet_server_port() AS port`,
+              host(inet_server_addr()) AS addr, inet_server_port() AS port`,
     );
     const actualDb = current.rows[0].db as string;
     const addr = current.rows[0].addr as string | null;
@@ -116,8 +155,15 @@ export async function connectGuarded(envVar = 'PHASE0_DATABASE_URL'): Promise<{ 
     if (actualDb !== expected.db) {
       throw new Error(`refusing to run: connected to "${actualDb}", expected "${expected.db}"`);
     }
-    if (addr !== '127.0.0.1' && addr !== '::1') {
-      throw new Error(`refusing to run: server address "${addr}" is not loopback`);
+    const verdict = classifyServerAddress(addr);
+    if (verdict === 'rejected' || addr === null) {
+      throw new Error(
+        `refusing to run: server address "${addr ?? '(null/unix-socket)'}" is neither loopback nor RFC1918 private ` +
+          `(URL host was loopback "${expected.host}"; see the server-view policy in db-guard.ts)`,
+      );
+    }
+    if (verdict === 'private') {
+      console.log(`db-guard: accepting private-range server address "${addr}" (Docker bridge port-forwarding)`);
     }
     if (port !== expected.port) {
       throw new Error(`refusing to run: server port ${port} does not match URL port ${expected.port}`);
@@ -141,12 +187,20 @@ export async function connectGuarded(envVar = 'PHASE0_DATABASE_URL'): Promise<{ 
 /** Re-verify live identity on an already-open pool before destructive work. */
 export async function verifyLiveIdentity(pool: Pool, expectedDb: string, expectedPort: number): Promise<void> {
   const current = await pool.query(
-    `SELECT current_database() AS db, inet_server_addr()::text AS addr, inet_server_port() AS port`,
+    `SELECT current_database() AS db, host(inet_server_addr()) AS addr, inet_server_port() AS port`,
   );
   const actualDb = current.rows[0].db as string;
   const addr = current.rows[0].addr as string | null;
   const port = Number(current.rows[0].port);
   if (actualDb !== expectedDb) throw new Error(`refusing destructive work: connected to "${actualDb}"`);
-  if (addr !== '127.0.0.1' && addr !== '::1') throw new Error(`refusing destructive work: server "${addr}" not loopback`);
+  const verdict = classifyServerAddress(addr);
+  if (verdict === 'rejected') {
+    throw new Error(
+      `refusing destructive work: server "${addr ?? '(null/unix-socket)'}" is neither loopback nor RFC1918 private`,
+    );
+  }
+  if (verdict === 'private') {
+    console.log(`db-guard: accepting private-range server address "${addr}" (Docker bridge port-forwarding)`);
+  }
   if (port !== expectedPort) throw new Error(`refusing destructive work: port ${port} mismatch`);
 }

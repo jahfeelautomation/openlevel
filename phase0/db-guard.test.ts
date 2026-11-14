@@ -3,7 +3,7 @@
  * run in CI/sandbox as well as locally. They prove the M-01 guard table.
  */
 import { describe, expect, test } from 'vitest';
-import { assertDisposableUrl, parseTarget, redactUrl } from './db-guard.js';
+import { assertDisposableUrl, classifyServerAddress, parseTarget, redactUrl } from './db-guard.js';
 
 describe('assertDisposableUrl table (M-01)', () => {
   const cases: { url: string; ok: boolean; note: string }[] = [
@@ -58,6 +58,48 @@ describe('assertDisposableUrl table (M-01)', () => {
       delete process.env.PGSERVICE;
     }
   });
+});
+
+describe('classifyServerAddress (review3 defects 1–2)', () => {
+  const cases: { addr: string | null | undefined; want: 'loopback' | 'private' | 'rejected' }[] = [
+    // Loopback, host() form and raw inet text alike (defect 1 regression).
+    { addr: '127.0.0.1', want: 'loopback' },
+    { addr: '127.0.0.1/32', want: 'loopback' },
+    { addr: '127.0.0.2', want: 'loopback' },
+    { addr: '::1', want: 'loopback' },
+    { addr: '::1/128', want: 'loopback' },
+    { addr: '[::1]', want: 'loopback' },
+    { addr: 'localhost', want: 'loopback' },
+    { addr: '  127.0.0.1  ', want: 'loopback' },
+    // RFC1918 private ranges (defect 2 policy: Docker bridge port-forwarding).
+    { addr: '10.0.0.1', want: 'private' },
+    { addr: '10.255.255.255', want: 'private' },
+    { addr: '172.16.0.1', want: 'private' },
+    { addr: '172.17.0.1', want: 'private' },
+    { addr: '172.17.0.1/32', want: 'private' },
+    { addr: '172.31.255.255', want: 'private' },
+    { addr: '192.168.0.1', want: 'private' },
+    { addr: '192.168.1.1/32', want: 'private' },
+    // Everything else fails closed.
+    { addr: null, want: 'rejected' },
+    { addr: undefined, want: 'rejected' },
+    { addr: '', want: 'rejected' },
+    { addr: '8.8.8.8', want: 'rejected' },
+    { addr: '172.15.255.255', want: 'rejected' },
+    { addr: '172.32.0.1', want: 'rejected' },
+    { addr: '192.167.1.1', want: 'rejected' },
+    { addr: '11.0.0.1', want: 'rejected' },
+    { addr: '1.2.3.0/24', want: 'rejected' },
+    { addr: '127.0.0.1/33', want: 'rejected' },
+    { addr: '999.1.1.1', want: 'rejected' },
+    { addr: 'not-an-ip', want: 'rejected' },
+    { addr: 'fe80::1', want: 'rejected' },
+  ];
+  for (const c of cases) {
+    test(`${JSON.stringify(c.addr)} → ${c.want}`, () => {
+      expect(classifyServerAddress(c.addr)).toBe(c.want);
+    });
+  }
 });
 
 describe('redactUrl (m-07)', () => {
