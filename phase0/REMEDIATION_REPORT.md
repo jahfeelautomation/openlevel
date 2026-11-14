@@ -94,6 +94,18 @@ Static defects found by adversarial re-read and fixed in `phase0/`
 - Matrix aligned to review2's canonical eight P1 rows with bullet maps;
   supplementary rows marked as such.
 
+## Addendum — container-identity invariant (prompt9 follow-up directive)
+
+Supersedes the review3 interim RFC1918 acceptance with exact binding:
+`phase0/container-identity.ts` parses `docker inspect` output and requires
+the run label, pinned digest, loopback-only publication, and interface
+addresses of this exact container; `db-guard.ts` enforces exact-match in
+container mode and strict loopback in native mode (no env = no exception).
+15 fixture tests green; B-UNIT total now 83/83. Testcontainers 12.2.1
+exposes no host-interface pinning (verified in installed types), so
+loopback publication is verified post-hoc and fails closed — documented
+in code, never silently accepted.
+
 ## Remaining BLOCKED (owner local run, runbook ready)
 
 All P1/P3/backpressure DB tests, rerun-twice, 20× SIGKILL, listener/auth

@@ -18,7 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:phase0": "node --import tsx phase0/test-env.ts run",
-    "test:phase0:unit": "vitest run --config phase0/vitest.phase0.config.ts phase0/db-guard.test.ts phase0/p1/outcome.test.ts phase0/test-env.test.ts phase0/baseline-gate.test.ts",
+    "test:phase0:unit": "vitest run --config phase0/vitest.phase0.config.ts phase0/db-guard.test.ts phase0/p1/outcome.test.ts phase0/test-env.test.ts phase0/baseline-gate.test.ts phase0/container-identity.test.ts",
     "test:phase0:integration": "node --import tsx phase0/test-env.ts run --no-unit",
     "test:env:up": "node --import tsx phase0/test-env.ts up",
     "test:env:down": "node --import tsx phase0/test-env.ts down"

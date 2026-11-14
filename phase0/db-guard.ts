@@ -18,13 +18,15 @@
  *    host(inet_server_addr())/inet_server_port() must satisfy the
  *    server-view policy + URL port. NOTE: `inet` casts to text WITH a
  *    netmask ('127.0.0.1/32'), so `host()` is mandatory (review3 defect 1).
- *  - Server-view policy (review3 defect 2 decision): the client-side URL
- *    must always be strict loopback (that proves operator intent), while
- *    the server-side observed address additionally accepts RFC1918
- *    private ranges — Docker port-forwarding legitimately presents the
- *    bridge gateway (e.g. 172.17.0.1). Private-range acceptance is always
- *    logged. Anything else (public, null/unix-socket, malformed) fails
- *    closed with observed-vs-expected detail.
+ *  - Server-view policy: the client-side URL must always be strict
+ *    loopback (that proves operator intent). The server-side observed
+ *    address must be loopback, or — ONLY in container mode, after the
+ *    orchestrator verified the container via docker inspect — must
+ *    EXACTLY match one of that container's interface addresses
+ *    (PHASE0_VERIFIED_ADDRS). Arbitrary RFC1918 is rejected even in
+ *    container mode; every container-match acceptance is logged.
+ *    Anything else (public, null/unix-socket, malformed) fails closed
+ *    with observed-vs-expected detail.
  *  - Never log credentials: errors carry redacted URLs only.
  */
 import { Pool } from 'pg';
@@ -111,6 +113,56 @@ export function assertDisposableUrl(url: string, sourceEnv: string): string {
 export type ServerAddressVerdict = 'loopback' | 'private' | 'rejected';
 
 /**
+ * Server-view policy decision (pure; unit-tested).
+ *
+ * - Native mode (verifiedAddrs null): server address must be loopback.
+ *   RFC1918 is REJECTED — there is no container binding it to.
+ * - Container mode (verifiedAddrs from `docker inspect` of OUR container):
+ *   loopback is still accepted, and any other address must EXACTLY match
+ *   one of the verified interface addresses. Arbitrary RFC1918 (siblings,
+ *   gateway, foreign hosts) is rejected with the evidence needed to see why.
+ */
+export function serverViewAllowed(
+  addr: string | null | undefined,
+  verifiedAddrs: string[] | null,
+): { ok: true; mode: 'loopback' | 'container-match' } | { ok: false; reason: string } {
+  const verdict = classifyServerAddress(addr);
+  if (verdict === 'loopback') return { ok: true, mode: 'loopback' };
+  if (verifiedAddrs === null) {
+    return {
+      ok: false,
+      reason: `server "${addr ?? '(null/unix-socket)'}" is not loopback and no container identity is verified (native mode)`,
+    };
+  }
+  const bare = String(addr ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\/(32|128)$/, '');
+  const normalizedSet = verifiedAddrs.map((a) =>
+    a.trim().toLowerCase().replace(/^\[|\]$/g, '').replace(/\/(32|128)$/, ''),
+  );
+  if (normalizedSet.includes(bare) && bare.length > 0) return { ok: true, mode: 'container-match' };
+  return {
+    ok: false,
+    reason:
+      `server "${addr ?? '(null/unix-socket)'}" does not match verified container interfaces ` +
+      `[${normalizedSet.join(', ') || '(none)'}]`,
+  };
+}
+
+/** Read container verification context from the orchestrator-set env (absent = native mode). */
+export function containerVerificationContext(): { addrs: string[] | null; serverPort: number | null } {
+  const raw = process.env.PHASE0_VERIFIED_ADDRS;
+  if (raw === undefined || raw.trim() === '') return { addrs: null, serverPort: null };
+  const port = Number(process.env.PHASE0_CONTAINER_PORT ?? '5432');
+  return {
+    addrs: raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0),
+    serverPort: Number.isInteger(port) && port > 0 && port <= 65535 ? port : 5432,
+  };
+}
+
+/**
  * Classify a server-observed address (pure; unit-tested without a database).
  * Accepts both `host()` form ('127.0.0.1') and raw inet text
  * ('127.0.0.1/32') defensively — callers must still use `host()` so the
@@ -155,18 +207,23 @@ export async function connectGuarded(envVar = 'PHASE0_DATABASE_URL'): Promise<{ 
     if (actualDb !== expected.db) {
       throw new Error(`refusing to run: connected to "${actualDb}", expected "${expected.db}"`);
     }
-    const verdict = classifyServerAddress(addr);
-    if (verdict === 'rejected' || addr === null) {
+    // Container mode (env set by the orchestrator after docker-inspect
+    // verification): the server port is the CONTAINER port, and the address
+    // must match a verified interface. Native mode: strict loopback + URL port.
+    const ctx = containerVerificationContext();
+    const decision = serverViewAllowed(addr, ctx.addrs);
+    if (!decision.ok || addr === null) {
       throw new Error(
-        `refusing to run: server address "${addr ?? '(null/unix-socket)'}" is neither loopback nor RFC1918 private ` +
-          `(URL host was loopback "${expected.host}"; see the server-view policy in db-guard.ts)`,
+        `refusing to run: ${!decision.ok ? decision.reason : 'server address is null'} ` +
+          `(URL host was loopback "${expected.host}")`,
       );
     }
-    if (verdict === 'private') {
-      console.log(`db-guard: accepting private-range server address "${addr}" (Docker bridge port-forwarding)`);
+    if (decision.mode === 'container-match') {
+      console.log(`db-guard: server address "${addr}" matches verified container interfaces`);
     }
-    if (port !== expected.port) {
-      throw new Error(`refusing to run: server port ${port} does not match URL port ${expected.port}`);
+    const wantPort = ctx.serverPort ?? expected.port;
+    if (port !== wantPort) {
+      throw new Error(`refusing to run: server port ${port} does not match expected ${wantPort}`);
     }
     return {
       pool,
@@ -193,14 +250,14 @@ export async function verifyLiveIdentity(pool: Pool, expectedDb: string, expecte
   const addr = current.rows[0].addr as string | null;
   const port = Number(current.rows[0].port);
   if (actualDb !== expectedDb) throw new Error(`refusing destructive work: connected to "${actualDb}"`);
-  const verdict = classifyServerAddress(addr);
-  if (verdict === 'rejected') {
-    throw new Error(
-      `refusing destructive work: server "${addr ?? '(null/unix-socket)'}" is neither loopback nor RFC1918 private`,
-    );
+  const ctx = containerVerificationContext();
+  const decision = serverViewAllowed(addr, ctx.addrs);
+  if (!decision.ok) {
+    throw new Error(`refusing destructive work: ${decision.reason}`);
   }
-  if (verdict === 'private') {
-    console.log(`db-guard: accepting private-range server address "${addr}" (Docker bridge port-forwarding)`);
+  if (decision.mode === 'container-match') {
+    console.log(`db-guard: server address "${addr}" matches verified container interfaces`);
   }
-  if (port !== expectedPort) throw new Error(`refusing destructive work: port ${port} mismatch`);
+  const wantPort = ctx.serverPort ?? expectedPort;
+  if (port !== wantPort) throw new Error(`refusing destructive work: server port ${port} mismatch (expected ${wantPort})`);
 }

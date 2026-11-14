@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { assertDisposableUrl, redactUrl } from './db-guard.js';
+import { verifyContainerIdentity } from './container-identity.js';
 
 export const PG_IMAGE = 'postgres@sha256:30551eca978d79ccf49d037bc297b5670baea61a04ceca42ff7fd3100163d3ce';
 export const PG_IMAGE_TAG = 'postgres:16.16'; // human label for the pinned digest above
@@ -143,6 +144,21 @@ export async function cmdUp(): Promise<EnvState> {
   // Adjustment 3: the existing loopback-only guard judges the container URL.
   // Never weakened: a non-loopback mapping fails the run, loudly.
   assertDisposableUrl(url, 'test-env(container)');
+  // Container-identity binding: inspect OUR container and require run label,
+  // pinned digest, loopback-only publication, and interface addresses that
+  // the live DB checks will match exactly. Anything else fails closed here,
+  // before any test connects.
+  const identity = await verifyContainerIdentity(container!.getId(), {
+    expectedRunId: id,
+    expectedImageRef: PG_IMAGE,
+    expectedDb: database,
+    urlPort: port,
+    containerPort: 5432,
+  });
+  process.env.PHASE0_VERIFIED_ADDRS = identity.serverAddresses.join(',');
+  process.env.PHASE0_CONTAINER_PORT = '5432';
+  console.log(`identity: container ${identity.containerId.slice(0, 12)} verified (${identity.evidence.networks})`);
+  console.log(`identity: server view must match [${identity.serverAddresses.join(', ')}], port 5432`);
   const version = await waitReady(url, 120_000);
   await assertScram(url);
   const state: EnvState = {

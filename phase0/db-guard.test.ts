@@ -3,7 +3,14 @@
  * run in CI/sandbox as well as locally. They prove the M-01 guard table.
  */
 import { describe, expect, test } from 'vitest';
-import { assertDisposableUrl, classifyServerAddress, parseTarget, redactUrl } from './db-guard.js';
+import {
+  assertDisposableUrl,
+  classifyServerAddress,
+  containerVerificationContext,
+  parseTarget,
+  redactUrl,
+  serverViewAllowed,
+} from './db-guard.js';
 
 describe('assertDisposableUrl table (M-01)', () => {
   const cases: { url: string; ok: boolean; note: string }[] = [
@@ -100,6 +107,44 @@ describe('classifyServerAddress (review3 defects 1–2)', () => {
       expect(classifyServerAddress(c.addr)).toBe(c.want);
     });
   }
+});
+
+describe('serverViewAllowed policy', () => {
+  const VERIFIED = ['172.17.0.4'];
+  test('native mode: loopback accepted, RFC1918 rejected', () => {
+    expect(serverViewAllowed('127.0.0.1', null)).toEqual({ ok: true, mode: 'loopback' });
+    expect(serverViewAllowed('172.17.0.4', null).ok).toBe(false);
+    expect(serverViewAllowed('10.0.0.1', null).ok).toBe(false);
+  });
+  test('container mode: exact interface match accepted (either form)', () => {
+    expect(serverViewAllowed('172.17.0.4', VERIFIED)).toEqual({ ok: true, mode: 'container-match' });
+    expect(serverViewAllowed('172.17.0.4/32', VERIFIED)).toEqual({ ok: true, mode: 'container-match' });
+    expect(serverViewAllowed('127.0.0.1', VERIFIED)).toEqual({ ok: true, mode: 'loopback' });
+  });
+  test('container mode: non-matching RFC1918 rejected with evidence', () => {
+    for (const addr of ['172.17.0.1', '172.17.0.9', '10.0.0.5']) {
+      const r = serverViewAllowed(addr, VERIFIED);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.reason).toContain('172.17.0.4');
+    }
+  });
+  test('container mode: empty verified set rejects everything but loopback', () => {
+    expect(serverViewAllowed('172.17.0.4', []).ok).toBe(false);
+    expect(serverViewAllowed('127.0.0.1', []).ok).toBe(true);
+  });
+  test('containerVerificationContext: unset means native mode', () => {
+    delete process.env.PHASE0_VERIFIED_ADDRS;
+    delete process.env.PHASE0_CONTAINER_PORT;
+    expect(containerVerificationContext()).toEqual({ addrs: null, serverPort: null });
+    process.env.PHASE0_VERIFIED_ADDRS = '172.17.0.4, 10.0.0.9';
+    process.env.PHASE0_CONTAINER_PORT = '5432';
+    try {
+      expect(containerVerificationContext()).toEqual({ addrs: ['172.17.0.4', '10.0.0.9'], serverPort: 5432 });
+    } finally {
+      delete process.env.PHASE0_VERIFIED_ADDRS;
+      delete process.env.PHASE0_CONTAINER_PORT;
+    }
+  });
 });
 
 describe('redactUrl (m-07)', () => {
