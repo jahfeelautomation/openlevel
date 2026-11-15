@@ -53,6 +53,9 @@ try {
   // --- P3 counts ---
   const ops = await pool.query(`SELECT billing_state, count(*)::int AS n FROM p3_operation GROUP BY 1`).catch(() => ({ rows: [] }));
   const attempts = await pool.query(`SELECT state, count(*)::int AS n FROM p3_attempt GROUP BY 1`).catch(() => ({ rows: [] }));
+  const archivedAttempts = await pool
+    .query(`SELECT count(*)::int AS n FROM p3_attempt_archive`)
+    .catch(() => ({ rows: [{ n: -1 }] }));
   const settle = await pool.query(
     `SELECT kind, count(*)::int AS n, coalesce(sum(amount_micro),0)::bigint AS total FROM p3_settlement GROUP BY 1`,
   ).catch(() => ({ rows: [] }));
@@ -82,13 +85,33 @@ try {
   check('no-negative-wallets', negWallets.length === 0, negWallets.length ? `${negWallets.length} negative` : `${wallets.rows.length} wallets ok`);
 
   // Every charged provider entry must have a matching attempt row.
+  // The P3 fixture TRUNCATEs p3_attempt between tests for isolation, so the
+  // schema moves those rows to p3_attempt_archive (BEFORE TRUNCATE trigger)
+  // and the audit reads live UNION archive: the evidence must survive the
+  // run that produced it. Without the archive the run-wide journal could
+  // never be matched (first run: 30 charged ops, 1 surviving attempt row).
+  const hasArchive =
+    (await pool.query(`SELECT to_regclass('public.p3_attempt_archive') AS r`)).rows[0].r !== null;
   const chargedOps = [...chargedByOp.keys()];
   let orphanCharges = 0;
   for (const op of chargedOps) {
-    const r = await pool.query(`SELECT count(*)::int AS n FROM p3_attempt WHERE operation_id = $1`, [op]);
+    const r = hasArchive
+      ? await pool.query(
+          `SELECT count(*)::int AS n FROM (
+             SELECT operation_id FROM p3_attempt WHERE operation_id = $1
+             UNION ALL
+             SELECT operation_id FROM p3_attempt_archive WHERE operation_id = $1
+           ) matched`,
+          [op],
+        )
+      : await pool.query(`SELECT count(*)::int AS n FROM p3_attempt WHERE operation_id = $1`, [op]);
     if (r.rows[0].n === 0) orphanCharges++;
   }
-  check('charges-have-attempts', orphanCharges === 0, `${chargedOps.length} charged ops checked`);
+  check(
+    'charges-have-attempts',
+    orphanCharges === 0,
+    `${chargedOps.length} charged ops checked${hasArchive ? ' (live + archive)' : ''}${orphanCharges ? `, ${orphanCharges} orphaned` : ''}`,
+  );
 
   // Settled amounts must equal their attempt costs (no silent averaging).
   const mismatch = await pool.query(
@@ -103,6 +126,7 @@ try {
     p3: {
       operationsByState: ops.rows,
       attemptsByState: attempts.rows,
+      attemptsArchived: archivedAttempts.rows[0]?.n ?? -1,
       settlements: settle.rows,
       wallets: wallets.rows.map((w) => ({ agency_id: w.agency_id, balance_credits_micro: String(w.b) })),
       providerCharges: chargedByOp.size,

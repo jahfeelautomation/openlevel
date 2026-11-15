@@ -56,3 +56,14 @@ stop condition ("no safe user-local alternative exists"), recorded with
 evidence rather than worked around. The remaining executable path is CI:
 push the prepared branch so GitHub-hosted runners (Docker-native) execute
 the workflows, pending push authorization.
+
+## Addendum 2026-11-15 — Track B native result (owner Mac)
+
+"no database server can originate from this sandbox" still holds for the
+sandbox seat. It never held for the owner's interactive Mac: PostgreSQL
+16.16 (Postgres.app, Apple Silicon) runs there on `127.0.0.1:5433`, and
+Track B `run-2026-11-15T03-19-34-525Z-29438` executed fully against it
+with exit 0 (evidence: `docs/plans/prompt11_imp.md`, 30 artifacts under
+`phase0/evidence/`). The Docker/Colima "not installable" verdicts above
+rest on vendor docs and stand regardless of seat; container-image
+provenance remains CI's gate (CI-CONTAINER).

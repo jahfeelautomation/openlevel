@@ -24,6 +24,24 @@ assertDisposableUrl(url, 'P1_DATABASE_URL');
 
 const pool = new Pool({ connectionString: url, max: 5 });
 
+/**
+ * Producer payload (handler `workflowArgsFor`): metadata only.
+ *
+ * The log key is NOT taken from these args. This workflow previously
+ * declared `{ workflowRunTag: string }`, a field no producer anywhere
+ * supplied — tests enqueue `[{ locationId, providerEventId }]`, so the step
+ * received `undefined`, the INSERT violated NOT NULL (SQLSTATE 23502), and
+ * every workflow ended `ERROR` with `p1_execution_log` empty while the
+ * reason sat only in `dbos.workflow_output` (workflow_status.error is NULL
+ * for this SDK path). Six P1 tests then timed out waiting for an execution
+ * that never recorded itself. The durable workflow ID is assigned by DBOS
+ * at enqueue and is the only key the test's `executionCount` queries.
+ */
+interface EchoInput {
+  locationId?: string;
+  providerEventId?: string;
+}
+
 const echoStep = DBOS.registerStep(
   async (workflowId: string): Promise<string> => {
     await pool.query(`INSERT INTO p1_execution_log (workflow_id) VALUES ($1)`, [workflowId]);
@@ -33,8 +51,10 @@ const echoStep = DBOS.registerStep(
 );
 
 const echoWorkflow = DBOS.registerWorkflow(
-  async (input: { workflowRunTag: string }): Promise<string> => {
-    return await echoStep(input.workflowRunTag);
+  async (_input: EchoInput): Promise<string> => {
+    const workflowId = DBOS.workflowID;
+    if (!workflowId) throw new Error('p1-echo: no durable workflow ID in workflow context');
+    return await echoStep(workflowId);
   },
   { name: 'p1-echo' },
 );

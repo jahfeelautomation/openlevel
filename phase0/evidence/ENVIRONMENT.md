@@ -38,3 +38,14 @@ Consequences, all definitive for this sandbox:
 Per review2 §9 this is a stop condition for autonomous DB execution only.
 Everything else in review2 proceeds here; the single narrow handoff is the
 owner-side run of the prepared package (`bash phase0/run-all.sh`).
+
+## Addendum 2026-11-15 — owner-Mac native success (Track B)
+
+The verdicts above govern the restricted agent-sandbox seat only. On the
+owner's Mac (Apple Silicon, Postgres.app), PostgreSQL 16.16 runs normally
+on loopback `127.0.0.1:5433`, and the full native Track B execution
+`run-2026-11-15T03-19-34-525Z-29438` passed against it (P1 9/9, P3 11/11,
+backpressure 1/1, rerun identical, 20/20 SIGKILL, reconciliation 4/4;
+see `docs/plans/prompt11_imp.md` and the `phase0/evidence/` artifacts).
+The sandbox EPERM observations are preserved as history, not deleted:
+each environment's verdict stands for the seat that produced it.

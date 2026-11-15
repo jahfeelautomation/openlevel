@@ -1,0 +1,66 @@
+{
+  "at": "2026-11-15T03:21:07.311Z",
+  "p1": {
+    "eventsByStatus": [
+      {
+        "status": "accepted",
+        "n": 10
+      }
+    ],
+    "executions": 10,
+    "archivedGenerations": 0
+  },
+  "p3": {
+    "operationsByState": [
+      {
+        "billing_state": "reserved",
+        "n": 1
+      }
+    ],
+    "attemptsByState": [
+      {
+        "state": "uncertain",
+        "n": 1
+      }
+    ],
+    "attemptsArchived": 34,
+    "settlements": [
+      {
+        "kind": "reserve",
+        "n": 1,
+        "total": "100000"
+      }
+    ],
+    "wallets": [
+      {
+        "agency_id": "ag-1",
+        "balance_credits_micro": "900000"
+      }
+    ],
+    "providerCharges": 30,
+    "providerLogEntries": 30
+  },
+  "invariants": [
+    {
+      "name": "journal-parseable",
+      "pass": true,
+      "detail": "30 entries ok"
+    },
+    {
+      "name": "no-negative-wallets",
+      "pass": true,
+      "detail": "1 wallets ok"
+    },
+    {
+      "name": "charges-have-attempts",
+      "pass": true,
+      "detail": "30 charged ops checked (live + archive)"
+    },
+    {
+      "name": "settle-equals-attempt-cost",
+      "pass": true,
+      "detail": "0 mismatches"
+    }
+  ],
+  "verdict": "PASS"
+}

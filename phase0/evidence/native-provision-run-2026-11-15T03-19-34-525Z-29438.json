@@ -1,0 +1,12 @@
+{
+  "provisioner": "native",
+  "executionId": "run-2026-11-15T03-19-34-525Z-29438",
+  "database": "phase0_proofs",
+  "bootstrapUser": "anton",
+  "serverVersion": "16.16 (Postgres.app)",
+  "serverAddress": "127.0.0.1",
+  "serverPort": 5433,
+  "passwordEncryption": "scram-sha-256",
+  "hbaRule": "line 115: host db=all user=all addr=127.0.0.1 method=scram-sha-256",
+  "startedAt": "2026-11-15T03:19:34.592Z"
+}

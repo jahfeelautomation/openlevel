@@ -246,9 +246,13 @@ export async function settle(pool: Pool, operationId: string, attemptId: string,
       await tx.query('COMMIT');
       return; // idempotent replay of the identical settlement
     }
+    // jsonb_build_object() parameters have no column context, so PostgreSQL
+    // cannot infer their types ("could not determine data type of parameter
+    // $2", SQLSTATE 42P18). Cast explicitly: attempt_id is text,
+    // amount_micro/actual_micro are bigint.
     await tx.query(
       `UPDATE p3_operation SET billing_state = 'settled',
-         terminal_result = jsonb_build_object('attempt_id', $2, 'actual_micro', $3)
+         terminal_result = jsonb_build_object('attempt_id', $2::text, 'actual_micro', $3::bigint)
        WHERE operation_id = $1 AND billing_state = 'reserved'`,
       [operationId, attemptId, actualMicro],
     );

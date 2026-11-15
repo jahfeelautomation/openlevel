@@ -51,6 +51,56 @@ export function escapeLikePrefix(prefix: string): string {
   return prefix.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
+/** FK edge among public tables: `child` holds a foreign key to `parent`. */
+export interface FkDependency {
+  child: string;
+  parent: string;
+}
+
+/**
+ * Order `candidates` for DROP (FK children first) and report any table that
+ * cannot be dropped because a referencing table survives outside the drop
+ * set. PostgreSQL refuses such drops ("other objects depend on it") and the
+ * referencing table is not ours to delete, so the plan retains the parent
+ * with the blocker named instead of failing the whole teardown. Pure;
+ * unit-tested.
+ */
+function orderDropsForForeignKey(
+  candidates: string[],
+  fk: FkDependency[],
+): { drops: string[]; blocked: Map<string, string> } {
+  const blocked = new Map<string, string>();
+  if (fk.length === 0) return { drops: candidates, blocked };
+  const set = new Set(candidates);
+  // Fixpoint: if a survivor references X, X is undroppable — and so is
+  // anything X itself references, transitively.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of [...set]) {
+      const survivor = fk.find((e) => e.parent === t && !set.has(e.child));
+      if (survivor) {
+        set.delete(t);
+        blocked.set(t, survivor.child);
+        changed = true;
+      }
+    }
+  }
+  // Stable topological order: emit a table only once every FK child of it
+  // that is also being dropped has been emitted; ledger order breaks ties.
+  const remaining = candidates.filter((t) => set.has(t));
+  const drops: string[] = [];
+  while (remaining.length > 0) {
+    const idx = remaining.findIndex(
+      (t) => !remaining.some((c) => c !== t && fk.some((e) => e.child === c && e.parent === t)),
+    );
+    if (idx === -1) break; // FK cycle among survivors: keep ledger order; DROP fails loudly
+    drops.push(...remaining.splice(idx, 1));
+  }
+  drops.push(...remaining);
+  return { drops, blocked };
+}
+
 /**
  * Build the teardown plan from ledger evidence (pure; unit-tested).
  *
@@ -60,6 +110,8 @@ export function escapeLikePrefix(prefix: string): string {
  * - `keyedTables`: prototype tables carrying a run-prefixed key column
  *   (discovered from information_schema, not hardcoded).
  * - `allPrototypeTables`: every p1_/p2_/p3_ table present now.
+ * - `fkDependencies`: FK edges from the live catalog (child REFERENCES
+ *   parent). Without it the planner preserves ledger order (unit tests).
  *
  * A table this execution did NOT create keeps its unattributable rows
  * (notably P3 fixed-id rows); only run-namespaced deletes apply there.
@@ -69,8 +121,10 @@ export function planNativeTeardown(args: {
   createdTables: string[];
   keyedTables: Array<{ table: string; column: string }>;
   allPrototypeTables: string[];
+  fkDependencies?: FkDependency[];
 }): TeardownPlan {
-  const drops = args.createdTables.filter((t) => args.allPrototypeTables.includes(t));
+  const candidates = args.createdTables.filter((t) => args.allPrototypeTables.includes(t));
+  const { drops, blocked } = orderDropsForForeignKey(candidates, args.fkDependencies ?? []);
   const dropped = new Set(drops);
   const deletes = args.keyedTables
     .filter((k) => args.allPrototypeTables.includes(k.table) && !dropped.has(k.table))
@@ -78,6 +132,14 @@ export function planNativeTeardown(args: {
   const retained: TeardownPlan['retained'] = [];
   for (const t of args.allPrototypeTables) {
     if (dropped.has(t)) continue;
+    const blocker = blocked.get(t);
+    if (blocker !== undefined) {
+      retained.push({
+        item: t,
+        reason: `referenced by ${blocker}, which this execution does not drop`,
+      });
+      continue;
+    }
     const keyed = args.keyedTables.some((k) => k.table === t);
     retained.push({
       item: t,

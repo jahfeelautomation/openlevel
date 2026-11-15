@@ -36,6 +36,7 @@ import {
   loadLedger,
   planNativeTeardown,
   snapshotPrototypeTables,
+  type FkDependency,
 } from './ownership.js';
 
 export const RUNTIME_ROLE = 'phase0_rt';
@@ -96,8 +97,9 @@ export function assertScramVerifierFormat(rolpassword: string | null, role: stri
 export interface HbaRuleRow {
   line_number: number;
   type: string;
-  database: string;
-  user_name: string;
+  /** Token arrays straight from PostgreSQL's `text[]` — never re-split (M6). */
+  database: string[];
+  user_name: string[];
   address: string | null;
   netmask: string | null;
   auth_method: string | null;
@@ -106,7 +108,8 @@ export interface HbaRuleRow {
 }
 
 export function formatHbaRule(row: HbaRuleRow): string {
-  return `line ${row.line_number}: ${row.type} db=${row.database} user=${row.user_name} addr=${row.address ?? '(n/a)'} method=${row.auth_method ?? '(error)'}`;
+  // Display-only join: matching below iterates elements, never this string.
+  return `line ${row.line_number}: ${row.type} db=${row.database.join(',')} user=${row.user_name.join(',')} addr=${row.address ?? '(n/a)'} method=${row.auth_method ?? '(error)'}`;
 }
 
 function parseIpv4(ip: string): number | null {
@@ -126,14 +129,17 @@ export function cidrContainsV4(address: string, netmask: string, clientIp: strin
   return (net & mask) >>> 0 === (client & mask) >>> 0;
 }
 
-function fieldMatchesList(field: string, value: string, dbForSameUser?: { db: string; user: string }): boolean {
-  for (const raw of field.split(',')) {
+function fieldMatchesList(field: string[], value: string, dbForSameUser?: { db: string; user: string }): boolean {
+  // Each element is one token PostgreSQL already parsed; a comma INSIDE an
+  // element (quoted token) never splits it. No second tokenizer here.
+  for (const raw of field) {
     const entry = raw.trim();
     if (entry === 'all' || entry === value) return true;
     if (dbForSameUser && entry === 'sameuser' && dbForSameUser.db === dbForSameUser.user) return true;
     // '+' group entries, 'samerole', 'replication', 'samegroup' are NOT
-    // evaluated here: failing closed with an explicit message beats
-    // pretending an unevaluated rule was checked.
+    // evaluated: they simply never match, so a rule relying on them falls
+    // through to the explicit "no rule matches" refusal below (fail-closed
+    // in effect; there is no per-entry message).
   }
   return false;
 }
@@ -194,6 +200,43 @@ function quoteTable(name: string): string {
   return `"public".${quoteName(name)}`;
 }
 
+/**
+ * Coerce a raw `pg_hba_file_rules` row into {@link HbaRuleRow}.
+ *
+ * PostgreSQL types `database`, `user_name` and `options` as `text[]`, which
+ * node-postgres hands back as JS arrays with one parsed token per element.
+ * `HbaRuleRow` keeps `database`/`user_name` as arrays end-to-end (M6): an
+ * earlier join-then-split round trip lost token boundaries, so a quoted
+ * comma-bearing token like `['phase0_x,other']` could mis-match `phase0_x`.
+ * A scalar degrades to a single element (never split); NULL degrades to an
+ * empty list so the rule is skipped and the lookup fails closed with "no
+ * rule matches" instead of crashing. (`options` is display-only and keeps
+ * its joined form; nothing matches against it.)
+ */
+export function toHbaRuleRow(raw: Record<string, unknown>): HbaRuleRow {
+  const asArray = (v: unknown): string[] => {
+    if (v == null) return [];
+    if (Array.isArray(v)) return v.filter((x) => x != null).map(String);
+    return [String(v)];
+  };
+  const joinList = (v: unknown): string | null => {
+    if (v == null) return null;
+    if (Array.isArray(v)) return v.filter((x) => x != null).map(String).join(',');
+    return String(v);
+  };
+  return {
+    line_number: Number(raw.line_number),
+    type: String(raw.type ?? ''),
+    database: asArray(raw.database),
+    user_name: asArray(raw.user_name),
+    address: (raw.address as string | null) ?? null,
+    netmask: (raw.netmask as string | null) ?? null,
+    auth_method: (raw.auth_method as string | null) ?? null,
+    options: joinList(raw.options),
+    error: (raw.error as string | null) ?? null,
+  };
+}
+
 async function queryApplicableHba(pool: Pool, database: string): Promise<HbaRuleRow> {
   const client = await pool.query(`SELECT host(inet_client_addr()) AS ip`);
   const clientIp = (client.rows[0] as { ip: string | null }).ip;
@@ -206,7 +249,9 @@ async function queryApplicableHba(pool: Pool, database: string): Promise<HbaRule
       `SELECT line_number, type, database, user_name, address, netmask, auth_method, options, error
        FROM pg_hba_file_rules ORDER BY line_number`,
     );
-    rows = r.rows as HbaRuleRow[];
+    // text[] columns (database/user_name/options) arrive as JS arrays;
+    // toHbaRuleRow() normalizes them — never blind-cast the shape.
+    rows = r.rows.map(toHbaRuleRow);
   } catch (err) {
     throw new Error(
       `refusing to run: cannot read pg_hba_file_rules from the bootstrap connection ` +
@@ -383,7 +428,26 @@ export const nativeProvisioner: Provisioner = {
       const ownsLedgerTable = ledger.some((r) => r.object_kind === 'ledger-table');
       const allPrototypeTables = await snapshotPrototypeTables(pool);
       const keyedTables = await discoverKeyedTables(pool);
-      const plan = planNativeTeardown({ ownedRunIds, createdTables, keyedTables, allPrototypeTables });
+      // FK edges from the live catalog: DROP must go children-before-parents
+      // (ledger order alone failed on p1_business_event_discrepancy →
+      // p1_business_event with "other objects depend on it").
+      const fkRows = await pool.query(
+        `SELECT child.relname::text AS child, parent.relname::text AS parent
+           FROM pg_constraint c
+           JOIN pg_class child ON child.oid = c.conrelid
+           JOIN pg_class parent ON parent.oid = c.confrelid
+          WHERE c.contype = 'f'
+            AND child.relnamespace = 'public'::regnamespace
+            AND parent.relnamespace = 'public'::regnamespace`,
+      );
+      const fkDependencies = fkRows.rows as FkDependency[];
+      const plan = planNativeTeardown({
+        ownedRunIds,
+        createdTables,
+        keyedTables,
+        allPrototypeTables,
+        fkDependencies,
+      });
       for (const del of plan.deletes) {
         for (const prefix of del.prefixes) {
           const pattern = `${escapeLikePrefix(prefix)}:%`;

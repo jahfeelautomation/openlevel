@@ -164,6 +164,11 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
       worker.stdout?.on('data', (d: Buffer) => {
         if (d.toString().includes('p1 worker up')) ready = true;
       });
+      // Worker stderr was piped but never read, so worker-side failures were
+      // invisible (the P1 defect only surfaced via dbos.workflow_output).
+      worker.stderr?.on('data', (d: Buffer) => {
+        process.stderr.write(`[p1 worker] ${d.toString()}`);
+      });
       const deadline = Date.now() + 60_000;
       while (!ready && Date.now() < deadline) {
         if (worker.exitCode !== null) break;
