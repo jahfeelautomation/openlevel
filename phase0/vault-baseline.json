@@ -1,0 +1,10 @@
+{
+  "_comment": "Pinned known-failure baseline for the full app suite (Adjustment 2). Update ONLY when the underlying defect is deliberately fixed, with the fix referenced.",
+  "knownFailures": [
+    {
+      "file": "server/lib/vault.test.ts",
+      "test": "resolveSecret reads an env var derived from the item name",
+      "reason": "Pre-existing mixed-case vs all-caps secret-name bug (baseline 2026-11-14). Not caused by Phase 0; fix is an owner product decision."
+    }
+  ]
+}

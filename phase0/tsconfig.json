@@ -1,0 +1,19 @@
+{
+  // Phase 0 isolated typecheck (M-04). The root tsconfig intentionally
+  // excludes phase0/ (prototype code must not join the app build), so this
+  // config is the single source of truth for prototype type safety.
+  // Exact command (recorded verbatim in the evidence matrix):
+  //   npx tsc -p phase0/tsconfig.json --noEmit
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"],
+    "allowJs": false
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["./node_modules"]
+}

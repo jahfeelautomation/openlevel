@@ -1,0 +1,43 @@
+# Staging fly.toml for the P2 fencing proof (Phase 0, isolated).
+# Reviews against: V2.1 §10, plan6.2 §3 + addendum §2.
+# DBOS__VMID appears NOWHERE here — the boot wrapper sets it worker-only.
+
+app = "openlevel-p2-staging"
+primary_region = "iad"  # placeholder pending M2 region decision; record actual at Gate D
+
+[build]
+  dockerfile = "Dockerfile.p2staging"  # minimal image: node + phase0 worker probe (Gate D)
+
+[deploy]
+  strategy = "rolling"
+  max_unavailable = 1
+  # release_command runs migrations here in Phase 2; P2 staging needs none.
+
+[processes]
+  web = "ROLE=web node dist/boot.js"
+  worker = "ROLE=worker node phase0/p2/boot-worker.mjs"
+
+[http_service]
+  internal_port = 8790
+  auto_stop_machines = "off"
+  processes = ["web"]
+  [[http_service.checks]]
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
+
+# Worker liveness is NOT web /health: heartbeat row (executor ID, queue
+# depth polled, sysdb latency, timestamp) every 30s; stale >3min pages.
+# Fly-level: worker process restart policy + scale count (see proof checklist).
+
+kill_signal = "SIGTERM"
+kill_timeout = "120s"
+
+# Worker restart policy (verified: [[restart]] is per-process-group;
+# policies always/never/on-failure; on-failure is the platform default).
+# on-failure: crashes restart (recovery path); clean exits, including
+# intentional deploy shutdowns, stay stopped (no restart loop).
+[[restart]]
+  processes = ["worker"]
+  policy = "on-failure"
+  retries = 10  # provisional; T4 records observed backoff, then tune

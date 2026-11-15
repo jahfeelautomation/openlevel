@@ -13,3 +13,6 @@ server-dist
 
 # Dry-run output for one-off seed loaders (contains PII — never commit)
 scripts/.out/
+
+# Local reference clone of the DBOS Transact TS SDK (not part of this repo)
+dbos-transact-ts/
