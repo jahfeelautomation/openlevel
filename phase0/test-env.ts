@@ -2,44 +2,45 @@
  * Phase 0 test environment lifecycle owner (sole orchestrator).
  *
  * Usage:
- *   node --import tsx phase0/test-env.ts run [--no-unit] [--keep-db]
- *   node --import tsx phase0/test-env.ts up      # start container, print env exports
- *   node --import tsx phase0/test-env.ts down    # stop container from state file
+ *   node --import tsx phase0/test-env.ts run [--no-unit] [--repeat-suites] [--sigkill-loop[=N]]
+ *   node --import tsx phase0/test-env.ts up      # provision + verify only
+ *   node --import tsx phase0/test-env.ts down    # tear down from state file
+ *
+ * Provisioner selection (prompt11 §1):
+ *   PHASE0_PROVISIONER=testcontainers  (default; CI path, Docker required)
+ *   PHASE0_PROVISIONER=native          (owner-controlled local PostgreSQL;
+ *     requires PHASE0_DATABASE_URL + PHASE0_RT_PASSWORD, see
+ *     phase0/LOCAL_POSTGRES_RUNBOOK.md)
+ * Anything else fails closed (exit 2). The harness never silently switches
+ * provisioners. Both adapters execute these same suites and assertions.
  *
  * Exit codes: 0 pass; 1 test/proof failure; 2 setup/infra failure (nothing
  * proven); 3 cleanup failure after an otherwise green run. Cleanup failures
  * never masquerade as test results and vice versa.
- *
- * Pinned image (Adjustment 4 — captured 2026-11-15 from Docker Hub API):
- * postgres:16.16 manifest list
- * sha256:30551eca978d79ccf49d037bc297b5670baea61a04ceca42ff7fd3100163d3ce
- * (multi-arch; amd64+arm64 cover CI runners and Apple Silicon.)
- *
- * Requires Docker. Without it, exit 2 with instructions (the manual
- * runbook remains the Docker-less fallback diagnostic path).
  */
-import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { Pool } from 'pg';
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { mkdirSync, rmSync } from 'node:fs';
 import { assertDisposableUrl, redactUrl } from './db-guard.js';
-import { verifyContainerIdentity } from './container-identity.js';
+import { nativeProvisioner } from './provisioners/native.js';
+import { testcontainersProvisioner, PG_IMAGE } from './provisioners/testcontainers.js';
+import {
+  EXIT_CLEANUP_FAIL,
+  EXIT_INFRA_FAIL,
+  EXIT_PASS,
+  EXIT_TEST_FAIL,
+  PROVISIONER_ENV_VAR,
+  UNIT_TEST_FILES,
+  parseProvisioner,
+  readProvisionedState,
+  recordRunId,
+  stateFilePath,
+  type Provisioned,
+  type Provisioner,
+} from './provisioners/types.js';
 
-export const PG_IMAGE = 'postgres@sha256:30551eca978d79ccf49d037bc297b5670baea61a04ceca42ff7fd3100163d3ce';
-export const PG_IMAGE_TAG = 'postgres:16.16'; // human label for the pinned digest above
-export const SCRAM_REQUIRED = 'scram-sha-256';
-
-export const EXIT_PASS = 0;
-export const EXIT_TEST_FAIL = 1;
-export const EXIT_INFRA_FAIL = 2;
-export const EXIT_CLEANUP_FAIL = 3;
-
-export function stateFilePath(): string {
-  return join(tmpdir(), 'phase0-test-env.json');
-}
+// Re-exported so existing importers (unit tests) keep working.
+export { PG_IMAGE, stateFilePath };
+export { EXIT_CLEANUP_FAIL, EXIT_INFRA_FAIL, EXIT_PASS, EXIT_TEST_FAIL };
 
 /** Derive the restricted runtime URL from the bootstrap URL (M-03). Pure and unit-tested. */
 export function deriveRuntimeUrl(bootstrapUrl: string, rtPassword: string): string {
@@ -49,65 +50,15 @@ export function deriveRuntimeUrl(bootstrapUrl: string, rtPassword: string): stri
   return u.toString();
 }
 
-export interface EnvState {
-  containerId: string;
-  containerName: string;
-  host: string;
-  port: number;
-  database: string;
-  bootstrapUser: string;
-  image: string;
-  runId: string;
-  startedAt: string;
-}
-
-/** Build a postgres URL without ever logging the password beside it. */
-export function buildUrl(opts: { user: string; password: string; host: string; port: number; database: string }): string {
-  const u = new URL('postgres://placeholder.invalid/');
-  u.hostname = opts.host;
-  u.port = String(opts.port);
-  u.username = opts.user;
-  u.password = opts.password;
-  u.pathname = `/${opts.database}`;
-  return u.toString();
+function selectProvisioner(): Provisioner {
+  const name = parseProvisioner(process.env[PROVISIONER_ENV_VAR]);
+  console.log(`provisioner: ${name}`);
+  return name === 'native' ? nativeProvisioner : testcontainersProvisioner;
 }
 
 function fail(message: string): never {
   console.error(`FATAL: ${message}`);
   process.exit(EXIT_INFRA_FAIL);
-}
-
-async function waitReady(url: string, timeoutMs: number): Promise<string> {
-  const start = Date.now();
-  let last: unknown = null;
-  while (Date.now() - start < timeoutMs) {
-    const probe = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 5000 });
-    try {
-      const r = await probe.query('SELECT version() AS v');
-      await probe.end().catch(() => undefined);
-      return (r.rows[0] as { v: string }).v;
-    } catch (err) {
-      last = err;
-      await probe.end().catch(() => undefined);
-      await new Promise((res) => setTimeout(res, 1000));
-    }
-  }
-  throw new Error(`postgres readiness timeout: ${String(last).slice(0, 200)}`);
-}
-
-async function assertScram(url: string): Promise<void> {
-  const pool = new Pool({ connectionString: url, max: 1 });
-  try {
-    const r = await pool.query('SHOW password_encryption');
-    const value = (r.rows[0] as { password_encryption: string }).password_encryption;
-    if (value !== SCRAM_REQUIRED) throw new Error(`password_encryption is '${value}', required '${SCRAM_REQUIRED}'`);
-  } finally {
-    await pool.end().catch(() => undefined);
-  }
-}
-
-function runId(): string {
-  return process.env.PHASE0_RUN_ID ?? `run-${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
 }
 
 function spawnStreaming(cmd: string, args: string[], env: NodeJS.ProcessEnv): Promise<number> {
@@ -118,101 +69,43 @@ function spawnStreaming(cmd: string, args: string[], env: NodeJS.ProcessEnv): Pr
   });
 }
 
-export async function cmdUp(): Promise<EnvState> {
-  const id = runId();
-  const password = randomBytes(24).toString('hex');
-  const user = 'phase0_owner';
-  const database = 'phase0_proofs';
-  let container: StartedPostgreSqlContainer;
-  try {
-    container = await new PostgreSqlContainer(PG_IMAGE)
-      .withDatabase(database)
-      .withUsername(user)
-      .withPassword(password)
-      .withLabels({ 'openlevel.phase0.run': id, 'openlevel.phase0.disposable': 'true' })
-      .withStartupTimeout(180_000)
-      .start();
-  } catch (err) {
-    fail(
-      `container start failed (is Docker running?): ${String(err).slice(0, 300)}. ` +
-        `Without Docker, use phase0/LOCAL_POSTGRES_RUNBOOK.md instead.`,
-    );
-  }
-  const host = container!.getHost();
-  const port = container!.getMappedPort(5432);
-  const url = buildUrl({ user, password, host, port, database });
-  // Adjustment 3: the existing loopback-only guard judges the container URL.
-  // Never weakened: a non-loopback mapping fails the run, loudly.
-  assertDisposableUrl(url, 'test-env(container)');
-  // Container-identity binding: inspect OUR container and require run label,
-  // pinned digest, loopback-only publication, and interface addresses that
-  // the live DB checks will match exactly. Anything else fails closed here,
-  // before any test connects.
-  const identity = await verifyContainerIdentity(container!.getId(), {
-    expectedRunId: id,
-    expectedImageRef: PG_IMAGE,
-    expectedDb: database,
-    urlPort: port,
-    containerPort: 5432,
-  });
-  process.env.PHASE0_VERIFIED_ADDRS = identity.serverAddresses.join(',');
-  process.env.PHASE0_CONTAINER_PORT = '5432';
-  console.log(`identity: container ${identity.containerId.slice(0, 12)} verified (${identity.evidence.networks})`);
-  console.log(`identity: server view must match [${identity.serverAddresses.join(', ')}], port 5432`);
-  const version = await waitReady(url, 120_000);
-  await assertScram(url);
-  const state: EnvState = {
-    containerId: container!.getId(),
-    containerName: container!.getName(),
-    host,
-    port,
-    database,
-    bootstrapUser: user,
-    image: `${PG_IMAGE_TAG} (${PG_IMAGE})`,
-    runId: id,
-    startedAt: new Date().toISOString(),
-  };
-  console.log(`container: ${state.containerName} (${state.containerId.slice(0, 12)}) host=${host} port=${port}`);
-  console.log(`postgres: ${version.split(' ').slice(0, 2).join(' ')} auth=${SCRAM_REQUIRED} (verified)`);
-  console.log(`url: ${redactUrl(url)}`);
-  writeFileSync(stateFilePath(), JSON.stringify({ ...state, bootstrapPassword: password }, null, 2), { mode: 0o600 });
-  // Stash the live container handle for in-process teardown (run mode).
-  (globalThis as Record<string, unknown>).__phase0_container = container;
-  process.env.PHASE0_DATABASE_URL = url;
-  process.env.PHASE0_BOOT_PASSWORD = password;
-  process.env.PHASE0_RT_PASSWORD = randomBytes(24).toString('hex');
-  process.env.PHASE0_RUN_ID = id;
-  return state;
+export async function cmdUp(): Promise<Provisioned> {
+  return selectProvisioner().up();
 }
 
 export async function cmdDown(): Promise<void> {
-  const live = (globalThis as Record<string, unknown>).__phase0_container as
-    | StartedPostgreSqlContainer
-    | undefined;
-  if (live) {
-    await live.stop();
-    delete (globalThis as Record<string, unknown>).__phase0_container;
-    console.log('container stopped (in-process handle)');
-  } else if (existsSync(stateFilePath())) {
-    console.log('no live handle; remove the container with: docker rm -f <id from evidence log>');
+  const state = readProvisionedState();
+  if (!state) {
+    rmSync(stateFilePath(), { force: true });
+    console.log('no provisioned state; nothing to tear down');
+    return;
   }
-  rmSync(stateFilePath(), { force: true });
-  console.log('teardown complete');
+  const provisioner = state.provisioner === 'native' ? nativeProvisioner : testcontainersProvisioner;
+  const report = await provisioner.down(state);
+  for (const line of report.cleaned) console.log(`cleaned: ${line}`);
+  for (const r of report.retained) console.log(`retained: ${r.item} (${r.reason})`);
 }
 
 async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop?: number }): Promise<never> {
   const t0 = Date.now();
   let verdict: number = EXIT_PASS;
+  let provisioner: Provisioner | null = null;
+  let state: Provisioned | null = null;
   try {
     if (opts.unit) {
-      console.log('--- unit (no container) ---');
-      const rc = await spawnStreaming('npx', ['vitest', 'run', '--config', 'phase0/vitest.phase0.config.ts', 'phase0/db-guard.test.ts', 'phase0/p1/outcome.test.ts'], process.env);
+      console.log('--- unit (no database) ---');
+      const rc = await spawnStreaming(
+        'npx',
+        ['vitest', 'run', '--config', 'phase0/vitest.phase0.config.ts', ...UNIT_TEST_FILES],
+        process.env,
+      );
       if (rc !== 0) {
         console.log('unit suites failed; skipping integration');
         process.exit(EXIT_TEST_FAIL);
       }
     }
-    const state = await cmdUp();
+    provisioner = selectProvisioner();
+    state = await provisioner.up();
     mkdirSync('phase0/evidence', { recursive: true });
     const run = async (label: string, cmd: string, args: string[]): Promise<void> => {
       console.log(`--- ${label} ---`);
@@ -223,7 +116,7 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
       }
     };
     const runSuite = async (label: string, file: string, extraArgs: string[] = []): Promise<void> => {
-      const json = `phase0/evidence/suite-${label}-${state.runId}.json`;
+      const json = `phase0/evidence/suite-${label}-${state!.executionId}.json`;
       await run(label, 'npx', [
         'vitest', 'run', '--config', 'phase0/vitest.phase0.config.ts',
         '--reporter=default', '--reporter=json', `--outputFile=${json}`, file, ...extraArgs,
@@ -245,6 +138,13 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
         verdict = EXIT_INFRA_FAIL;
       } else {
         assertDisposableUrl(rtUrl, 'test-env(runtime)');
+        try {
+          const evidence = await provisioner.verifyRuntime(rtUrl);
+          console.log(`runtime: ${evidence.runtimeUser}@${evidence.serverAddress}:${evidence.serverPort} scram=${evidence.scram.verifierFormat}`);
+        } catch (err) {
+          console.log(`runtime verification FAILED: ${redactUrl(String((err as Error)?.message ?? err)).slice(0, 500)}`);
+          verdict = EXIT_INFRA_FAIL;
+        }
         process.env.PHASE0_RT_URL = rtUrl;
         process.env.P1_DATABASE_URL = rtUrl;
         process.env.P3_DATABASE_URL = rtUrl;
@@ -253,7 +153,7 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
     if (verdict === EXIT_PASS) {
       // Shared provider journal for the whole run (P3 tests respect a preset
       // path); reconcile.mjs audits it after the suites complete.
-      process.env.P3_PROVIDER_LOG = `phase0/evidence/provider-${state.runId}.jsonl`;
+      process.env.P3_PROVIDER_LOG = `phase0/evidence/provider-${state.executionId}.jsonl`;
       rmSync(process.env.P3_PROVIDER_LOG, { force: true });
       // Worker supervision: spawn, wait for readiness, kill on teardown.
       const worker = spawn('node', ['--import', 'tsx', 'phase0/p1/worker.ts'], {
@@ -278,8 +178,9 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
         await runSuite('backpressure', 'phase0/p1/backpressure.test.ts');
         await runSuite('P3', 'phase0/p3/p3.test.ts');
         if (opts.repeatSuites) {
-          // Retained-database rerun: same container, fresh run identity, history kept.
-          process.env.PHASE0_RUN_ID = `${state.runId}-rerun`;
+          // Retained-database rerun: same database, fresh run identity, history kept.
+          process.env.PHASE0_RUN_ID = `${state.executionId}-rerun`;
+          recordRunId(process.env.PHASE0_RUN_ID);
           await runSuite('P1-rerun', 'phase0/p1/p1.test.ts');
           await runSuite('backpressure-rerun', 'phase0/p1/backpressure.test.ts');
           await runSuite('P3-rerun', 'phase0/p3/p3.test.ts');
@@ -301,24 +202,26 @@ async function cmdRun(opts: { unit: boolean; repeatSuites?: boolean; sigkillLoop
         });
       }
     }
-    const reconJson = `phase0/evidence/reconciliation-${state.runId}.json`;
-    const summaryMd = `phase0/evidence/summary-${state.runId}.md`;
+    const reconJson = `phase0/evidence/reconciliation-${state.executionId}.json`;
+    const summaryMd = `phase0/evidence/summary-${state.executionId}.md`;
     if (verdict === EXIT_PASS) {
       await run('reconcile', 'node', ['phase0/reconcile.mjs', reconJson]);
     }
     await run('summary', 'node', [
-      'phase0/summary.mjs', 'phase0/evidence', state.runId, summaryMd,
+      'phase0/summary.mjs', 'phase0/evidence', state.executionId, summaryMd,
     ]);
-    console.log(`run id: ${state.runId} container: ${state.containerName} elapsed_s=${Math.round((Date.now() - t0) / 1000)}`);
+    console.log(`run id: ${state.executionId} run_ids=[${[...state.runIds, process.env.PHASE0_RUN_ID ?? ''].filter((v, i, a) => v && a.indexOf(v) === i).join(',')}] elapsed_s=${Math.round((Date.now() - t0) / 1000)}`);
   } catch (err) {
     console.log(`FATAL: ${redactUrl(String((err as Error)?.message ?? err)).slice(0, 500)}`);
     verdict = EXIT_INFRA_FAIL;
   } finally {
     if (process.env.PHASE0_KEEP_DB === '1') {
-      console.log('PHASE0_KEEP_DB=1: container retained for debugging (state file keeps the id; password shown once at startup only)');
-    } else {
+      console.log('PHASE0_KEEP_DB=1: database retained for debugging (state file keeps the identity; secrets never logged)');
+    } else if (provisioner && state) {
       try {
-        await cmdDown();
+        const report = await provisioner.down(state);
+        for (const line of report.cleaned) console.log(`cleaned: ${line}`);
+        for (const r of report.retained) console.log(`retained: ${r.item} (${r.reason})`);
       } catch (err) {
         console.log(`cleanup FAILED: ${String((err as Error)?.message ?? err).slice(0, 200)}`);
         if (verdict === EXIT_PASS) verdict = EXIT_CLEANUP_FAIL;
@@ -335,22 +238,26 @@ import { pathToFileURL } from 'node:url';
 const invokedAsScript = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (invokedAsScript) {
   const [cmd, ...rest] = process.argv.slice(2);
-  if (cmd === 'up') {
-    await cmdUp();
-    process.exit(0);
-  } else if (cmd === 'down') {
-    await cmdDown();
-    process.exit(0);
-  } else if (cmd === 'run') {
-    const loopArg = rest.find((a) => a.startsWith('--sigkill-loop'));
-    const loopCount = loopArg?.includes('=') ? Number(loopArg.split('=')[1]) : loopArg ? 20 : 0;
-    await cmdRun({
-      unit: !rest.includes('--no-unit'),
-      repeatSuites: rest.includes('--repeat-suites'),
-      sigkillLoop: Number.isInteger(loopCount) && loopCount > 0 ? loopCount : 0,
-    });
-  } else {
-    console.error('usage: test-env.ts (up|down|run [--no-unit])');
-    process.exit(2);
+  try {
+    if (cmd === 'up') {
+      await cmdUp();
+      process.exit(0);
+    } else if (cmd === 'down') {
+      await cmdDown();
+      process.exit(0);
+    } else if (cmd === 'run') {
+      const loopArg = rest.find((a) => a.startsWith('--sigkill-loop'));
+      const loopCount = loopArg?.includes('=') ? Number(loopArg.split('=')[1]) : loopArg ? 20 : 0;
+      await cmdRun({
+        unit: !rest.includes('--no-unit'),
+        repeatSuites: rest.includes('--repeat-suites'),
+        sigkillLoop: Number.isInteger(loopCount) && loopCount > 0 ? loopCount : 0,
+      });
+    } else {
+      console.error(`usage: test-env.ts (up|down|run [--no-unit] [--repeat-suites] [--sigkill-loop[=N]]) [${PROVISIONER_ENV_VAR}=testcontainers|native]`);
+      process.exit(2);
+    }
+  } catch (err) {
+    fail(redactUrl(String((err as Error)?.message ?? err)).slice(0, 500));
   }
 }

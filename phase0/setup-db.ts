@@ -8,6 +8,8 @@
  *  4. Ensure restricted runtime role exists (created by bootstrap superuser).
  *  5. Grant runtime role rights within the scratch DB only.
  *  6. Verify: list created relations; print server version (no secrets).
+ *  7. Record ownership ledger rows (tables created above + run namespace)
+ *     so native teardown deletes only proven-owned objects.
  *
  * Run: node --import tsx phase0/setup-db.ts   (with PHASE0_DATABASE_URL set)
  */
@@ -26,6 +28,7 @@ import { GlobalLogger } from '@dbos-inc/dbos-sdk/internal/telemetry/logs';
 // @ts-ignore
 import { grantDbosSchemaPermissions } from '@dbos-inc/dbos-sdk/internal/system_database';
 import { assertDisposableUrl, parseTarget, redactUrl, verifyLiveIdentity } from './db-guard.js';
+import { recordOwnership, snapshotPrototypeTables } from './provisioners/ownership.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const RUNTIME_ROLE = 'phase0_rt';
@@ -43,6 +46,10 @@ async function main(): Promise<void> {
     await verifyLiveIdentity(admin, target.db, target.port);
     console.log('live identity verified on setup connection');
 
+    // Ownership snapshot (prompt11 §3): tables created below are recorded
+    // so native teardown can prove what this execution owns. Runs in both
+    // provisioner modes; only native teardown consumes the ledger.
+    const tablesBefore = new Set(await snapshotPrototypeTables(admin));
     const logger = new GlobalLogger();
     await ensureSystemDatabase(url, logger);
     console.log('dbos system schema: ensured');
@@ -105,6 +112,10 @@ async function main(): Promise<void> {
        ORDER BY 1`,
     );
     console.log(`prototype relations present: ${rels.rows.length}`);
+    const runId = process.env.PHASE0_RUN_ID ?? 'manual';
+    const createdTables = (await snapshotPrototypeTables(admin)).filter((t) => !tablesBefore.has(t));
+    await recordOwnership(admin, { executionId: runId, runId, createdTables });
+    console.log(`ownership: recorded ${createdTables.length} created table(s) for run ${runId}`);
     const ver = await admin.query('SHOW server_version');
     console.log(`server_version: ${ver.rows[0].server_version}`);
   } finally {

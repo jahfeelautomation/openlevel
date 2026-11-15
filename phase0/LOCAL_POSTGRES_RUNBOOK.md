@@ -27,10 +27,11 @@ Do NOT assume any `/tmp` toolchain persists between sessions — if a prior
 
 ## 1. Install disposable PostgreSQL (pick ONE option)
 
-**Version rule:** use PostgreSQL 16.x or newer (DBOS 5.x + Neon-parity
-range). Record the exact `SELECT version()` output in the evidence log.
-Compatibility against the actual Neon target branch must be verified
-before production cutover (V2.1 gate, not assumed here).
+**Version rule:** use PostgreSQL **16.x exactly** — the native
+provisioner major-gates to 16 to match the CI image (postgres:16.16); any
+other major is refused. Record the exact `SELECT version()` output in the
+evidence log. Compatibility against the actual Neon target branch must be
+verified before production cutover (V2.1 gate, not assumed here).
 
 **Option A — Postgres.app (recommended, no sudo, no package manager):**
 
@@ -143,6 +144,11 @@ production marker, unreachable server) aborts everything downstream —
 fix the target, never the guard.
 
 ## 5. Full proof sequence (one command)
+
+Preferred orchestrated path (native provisioner, SCRAM demonstration,
+ownership-scoped teardown, rerun + 20× SIGKILL built in): follow
+`phase0/TRACK_B_NATIVE.md` §B-1–§B-2 (one command). The manual fallback
+below remains for diagnosis.
 
 ```bash
 bash phase0/run-all.sh
