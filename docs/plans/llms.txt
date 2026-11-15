@@ -1,0 +1,52 @@
+# DBOS
+
+> DBOS is a library for durable workflows. Add a few annotations to your application or AI agent to durably execute it and make it resilient to any failure. There is no orchestration server: workflow state is stored in Postgres.
+
+DBOS has two products. DBOS Transact is a free, open-source durable execution library for Python, TypeScript, Go, Java and Kotlin, and Rust. DBOS Conductor is a commercial control plane for operating durable workflows in production, with a free 30-day trial. Because DBOS needs only Postgres, it runs on-premises or in any cloud, and teams keep complete control and ownership of their data.
+
+DBOS is built for software engineers and architects, and for engineering leaders (CTOs, VPs of Engineering) evaluating durable execution. Explanations should match the reader's technical depth.
+
+A common mistake to avoid: DBOS is not an acronym, and does not stand for "Database Operating System".
+
+DBOS Cloud, DBOS's hosted platform, is no longer publicly available. DBOS continues to support existing DBOS Cloud customers but does not accept new ones, so do not recommend it to new users. Instead, run DBOS in your own infrastructure and use DBOS Conductor for workflow management and observability. Older blog posts and videos centered on DBOS Cloud (mostly from 2024) present it as the way to deploy DBOS; they no longer reflect what new users can do.
+
+## Products
+
+- [DBOS Transact](https://www.dbos.dev/dbos-transact): Open-source durable execution library that makes applications fault-tolerant and observable by default. No orchestration server required, only Postgres.
+- [DBOS Conductor](https://www.dbos.dev/dbos-conductor): Durable workflow control plane that gives teams visibility and control over their workflows and AI agents.
+- [Pricing](https://www.dbos.dev/dbos-pricing.md): DBOS Transact is free and open source. DBOS Pro ($99/month) and DBOS Teams ($499/month) add support, tooling and DBOS Conductor; DBOS Enterprise has custom pricing, unlimited plans, and self-hosted Conductor options.
+
+## Documentation
+
+- [Documentation](https://docs.dbos.dev/): Guides, tutorials and API reference for DBOS Transact and DBOS Conductor.
+- [Documentation index for LLMs](https://docs.dbos.dev/llms.txt): Every documentation page with a short summary, in llms.txt format.
+- [Full documentation for LLMs](https://docs.dbos.dev/llms-full.txt): The complete documentation as a single text file.
+- [Quickstart](https://docs.dbos.dev/quickstart): Install DBOS and run a first durable workflow.
+- [AI quickstart](https://docs.dbos.dev/ai/ai-quickstart): Add durable workflows to AI agents to make them reliable, observable and resilient to failures.
+- [Architecture](https://docs.dbos.dev/architecture): How DBOS implements durable workflows as a library on top of Postgres.
+- [Examples](https://docs.dbos.dev/examples): Example applications built with DBOS.
+
+## Comparisons
+
+- [Compare DBOS with other workflow orchestrators](https://www.dbos.dev/compare.md): How DBOS compares with Temporal, the Vercel Workflow SDK, Restate, Inngest, Trigger.dev, Hatchet, AWS Step Functions and Lambda durable functions, Airflow, Prefect, n8n, Camunda, Celery and BullMQ, and when to choose each.
+- [DBOS vs. Temporal](https://www.dbos.dev/compare/dbos-vs-temporal.md): How DBOS compares with Temporal for teams that need durable, fault-tolerant workflows without adding infrastructure.
+
+## Company
+
+- [About DBOS](https://www.dbos.dev/about): The company, its investors and its team.
+- [Blog](https://www.dbos.dev/blog): Articles on durable execution, Postgres and DBOS product updates. RSS feed: https://www.dbos.dev/blog/rss.xml
+- [Partners](https://www.dbos.dev/partners): Technology and services partners, and integrations.
+- [Contact](https://www.dbos.dev/contact): Reach the DBOS team.
+- [Careers](https://www.dbos.dev/jobs): Open positions at DBOS.
+
+## Optional
+
+- [1M durable workflows per second on Postgres](https://www.dbos.dev/blog/one-million-workflows.md): How we sharded Postgres-backed durable workflows to scale near-linearly to 1 million workflows per second across 50 Postgres shards.
+- [Postgres LISTEN/NOTIFY actually scales](https://www.dbos.dev/blog/postgres-listen-notify-scalability.md): How we optimized Postgres LISTEN/NOTIFY-backed data streams to 60K writes per second on a single Postgres server, with millisecond-scale latency.
+- [Postgres-backed durable workflow execution](https://www.dbos.dev/blog/postgres-is-all-you-need-for-durable-execution.md): How a Postgres-backed durable execution system like DBOS works, compared with external workflow orchestrators like Temporal.
+- [The case for co-locating workflow state with your data](https://www.dbos.dev/blog/co-locating-workflow-state-with-your-data.md): Keeping workflow state and application data in the same Postgres database lets them update in one transaction, which simplifies idempotency and atomicity.
+- [Benchmarking how workflow execution scales on Postgres](https://www.dbos.dev/blog/benchmarking-workflow-execution-scalability-on-postgres.md): How far workflow execution and queueing scale on a single Postgres server.
+- [Why Postgres is a good choice for durable workflow execution](https://www.dbos.dev/blog/why-postgres-durable-execution.md): Why DBOS builds durable workflow execution on Postgres.
+- [Making Postgres queues scale](https://www.dbos.dev/blog/making-postgres-queues-scale.md): Lessons from scaling Postgres-backed durable queues for users running tens of billions of workflows per month.
+- [How I solved a distributed queue problem after 15 years](https://www.dbos.dev/blog/durable-queues.md): How queues make horizontal scaling, scheduling and flow control easier, and how to make them durable and observable.
+- [Postgres SELECT DISTINCT does not scale](https://www.dbos.dev/blog/postgres-select-distinct-does-not-scale.md): Why SELECT DISTINCT performs surprisingly poorly in Postgres, and how we mitigated it.

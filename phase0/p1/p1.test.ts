@@ -13,6 +13,12 @@ import { Pool } from 'pg';
 import { deleteWorkflowById, getWorkflowStatus, createClient, resetSharedClients } from './dbos-adapter.js';
 import { handleEvent, testIds, workflowIdForGen, type AuthenticatedEvent, type P1Deps } from './handler.js';
 import { assertDisposableUrl } from '../db-guard.js';
+import {
+  formatActivitySnapshot,
+  selectContendingBackends,
+  type ActivityRow,
+  type ContentionFilter,
+} from './race-observer.js';
 
 const DATABASE_URL = process.env.P1_DATABASE_URL ?? process.env.PHASE0_DATABASE_URL ?? '';
 // Run identity (M-05): business keys are namespaced per run so the suite is
@@ -41,6 +47,57 @@ function makeDeps(pool: Pool): P1Deps {
     queueName: 'p1',
     workflowArgsFor: (e) => [{ locationId: e.locationId, providerEventId: e.providerEventId }],
   };
+}
+
+/**
+ * Poll the independent observer pool until at least two distinct contender
+ * backends are actually blocked on the P1 insert, or fail loudly with a
+ * full activity snapshot at the deadline. Observer query errors propagate
+ * — they are never swallowed into a zero count. The winner stays held for
+ * the whole window, so polling only waits for loser arrival (guaranteed by
+ * pool capacity), never for a lucky timing overlap.
+ */
+async function observeContenders(
+  observerPool: Pool,
+  winnerArrived: () => boolean,
+  filter: ContentionFilter & { deadlineMs: number },
+): Promise<number[]> {
+  const selfPid = (await observerPool.query('SELECT pg_backend_pid() AS pid')).rows[0].pid as number;
+  const start = Date.now();
+  let lastSnapshot = '(no observation yet)';
+  for (;;) {
+    const r = await observerPool.query(
+      `SELECT pid, datname, application_name, state, wait_event_type, wait_event,
+              left(query, 300) AS query, xact_start::text AS xact_start,
+              pg_blocking_pids(pid) AS blockers
+       FROM pg_stat_activity
+       WHERE datname = current_database() AND pid <> pg_backend_pid()`,
+    );
+    const rows = (r.rows as Array<Record<string, unknown>>).map(
+      (row): ActivityRow => ({
+        pid: row.pid as number,
+        datname: row.datname as string | null,
+        application_name: row.application_name as string | null,
+        state: row.state as string | null,
+        wait_event_type: row.wait_event_type as string | null,
+        wait_event: row.wait_event as string | null,
+        query: row.query as string | null,
+        xact_start: row.xact_start as string | null,
+        blockers: (row.blockers as number[] | null) ?? [],
+      }),
+    );
+    lastSnapshot = formatActivitySnapshot(rows);
+    if (winnerArrived()) {
+      const contenders = selectContendingBackends(rows, selfPid, filter);
+      if (contenders.length >= 2) return contenders;
+    }
+    if (Date.now() - start > filter.deadlineMs) {
+      throw new Error(
+        `timed out waiting for contending P1 backends (winner arrived: ${winnerArrived()}). Snapshot:\n${lastSnapshot}`,
+      );
+    }
+    await new Promise((res) => setTimeout(res, 100));
+  }
 }
 
 describe('P1 atomic enqueue (requires P1_DATABASE_URL + pinned SDK)', () => {
@@ -77,64 +134,87 @@ describe('P1 atomic enqueue (requires P1_DATABASE_URL + pinned SDK)', () => {
   }
 
   gated('concurrent identical requests create one business event and one workflow', async () => {
-    const deps = makeDeps(pool);
-    const e = makeEvent();
-    // Barrier + overlap evidence (i-01): contenders wait for a shared release
-    // while a sampler records peak concurrent active backends. The unique
-    // constraint decides the winner deterministically; the sampler proves the
-    // transactions genuinely overlapped (maxActive >= 2) rather than running
-    // back-to-back.
-    let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    const N = 8;
-    let stopSampling = false;
-    let maxActive = 0;
-    const sampler = (async () => {
-      while (!stopSampling) {
-        try {
-          const r = await pool.query(
-            `SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND state = 'active' AND pid <> pg_backend_pid()`,
-          );
-          maxActive = Math.max(maxActive, r.rows[0].n as number);
-        } catch {
-          break;
-        }
-        await new Promise((res) => setTimeout(res, 25));
-      }
-    })();
-    const racers = Array.from({ length: N }, () => gate.then(() => handleEvent(deps, e)));
-    await new Promise((r) => setTimeout(r, 100));
-    release();
-    const results = await Promise.all(racers);
-    stopSampling = true;
-    await sampler;
-    expect(maxActive).toBeGreaterThanOrEqual(2);
-    const accepted = results.filter((r) => r.outcome === 'accepted');
-    const dups = results.filter((r) => r.outcome === 'duplicate');
-    expect(accepted.length).toBe(1);
-    expect(dups.length).toBe(N - 1);
-    for (const d of dups) {
-      if (d.outcome !== 'duplicate') throw new Error('unreachable');
-      expect(d.workflowId).toBe(testIds(e).workflowId);
-      // m-01: every loser reports a live DBOS status (not a bare UUID).
-      // Equality across losers is NOT asserted: early losers may observe
-      // ENQUEUED/PENDING while later ones observe SUCCESS — all legitimate.
-      expect(['PENDING', 'SUCCESS', 'ERROR', 'ENQUEUED']).toContain(d.status);
-    }
-    const count = await pool.query('SELECT count(*)::int AS n FROM p1_business_event');
-    expect(count.rows[0].n).toBe(1);
-    // Reuse-behavior proof: exactly one execution for the shared UUID, and
-    // the duplicate path observed the live workflow (no second enqueue).
-    await waitForExecution(testIds(e).workflowId);
-    expect(await executionCount(testIds(e).workflowId)).toBe(1);
-    const client = await createClient(DATABASE_URL);
+    // Deterministic contention proof (prompt16): the unique constraint
+    // decides the winner; the winner holds its uncommitted transaction at
+    // the afterInsert hook while losers block on the unique insert; an
+    // INDEPENDENT observer pool records backends actually blocked on the
+    // P1 insert (pg_blocking_pids), never the contenders' own pool. The
+    // old same-pool 25ms sampler missed short windows and swallowed its
+    // own errors (CI run 43688018842: maxActive 0) — it is gone.
+    const contenderPool = new Pool({ connectionString: DATABASE_URL, max: 5, application_name: 'p1-race-contender' });
+    const observerPool = new Pool({ connectionString: DATABASE_URL, max: 1, application_name: 'p1-race-observer' });
     try {
-      const st = await getWorkflowStatus(client, testIds(e).workflowId);
-      expect(st?.status).toBe('SUCCESS');
+      const deps = makeDeps(contenderPool);
+      const e = makeEvent();
+      const N = 8;
+      let releaseWinner!: () => void;
+      const winnerGate = new Promise<void>((r) => (releaseWinner = r));
+      let winnerArrived = false;
+      const holdDeps: P1Deps = {
+        ...deps,
+        hooks: {
+          afterInsert: async () => {
+            winnerArrived = true;
+            await winnerGate;
+          },
+        },
+      };
+      const racers = Array.from({ length: N }, () => handleEvent(holdDeps, e));
+      let observed: number[];
+      try {
+        observed = await observeContenders(observerPool, () => winnerArrived, {
+          database: new URL(DATABASE_URL).pathname.replace(/^\//, ''),
+          contenderApp: 'p1-race-contender',
+          queryFragment: 'INSERT INTO p1_business_event',
+          deadlineMs: 15000,
+        });
+      } catch (err) {
+        releaseWinner();
+        const settled = await Promise.allSettled(racers);
+        if (!winnerArrived) {
+          const rejected = settled.find((s): s is PromiseRejectedResult => s.status === 'rejected');
+          if (rejected) {
+            throw new Error(
+              `${(err as Error).message} | winner never arrived; racer rejection: ${String(rejected.reason).slice(0, 300)}`,
+            );
+          }
+        }
+        throw err;
+      }
+      releaseWinner();
+      const results = await Promise.all(racers);
+      expect(observed.length).toBeGreaterThanOrEqual(2);
+      const accepted = results.filter((r) => r.outcome === 'accepted');
+      const dups = results.filter((r) => r.outcome === 'duplicate');
+      expect(accepted.length).toBe(1);
+      expect(dups.length).toBe(N - 1);
+      for (const d of dups) {
+        if (d.outcome !== 'duplicate') throw new Error('unreachable');
+        expect(d.workflowId).toBe(testIds(e).workflowId);
+        // m-01: every loser reports a live DBOS status (not a bare UUID).
+        // Equality across losers is NOT asserted: early losers may observe
+        // ENQUEUED/PENDING while later ones observe SUCCESS — all legitimate.
+        expect(['PENDING', 'SUCCESS', 'ERROR', 'ENQUEUED']).toContain(d.status);
+      }
+      const count = await pool.query('SELECT count(*)::int AS n FROM p1_business_event');
+      expect(count.rows[0].n).toBe(1);
+      // Reuse-behavior proof: exactly one execution for the shared UUID, and
+      // the duplicate path observed the live workflow (no second enqueue).
+      await waitForExecution(testIds(e).workflowId);
+      expect(await executionCount(testIds(e).workflowId)).toBe(1);
+      const client = await createClient(DATABASE_URL);
+      try {
+        const st = await getWorkflowStatus(client, testIds(e).workflowId);
+        expect(st?.status).toBe('SUCCESS');
+      } finally {
+        await client.destroy();
+      }
     } finally {
-      await client.destroy();
+      await contenderPool.end().catch(() => undefined);
+      await observerPool.end().catch(() => undefined);
     }
   });
+
 
   gated('rollback leaves neither business event nor workflow', async () => {
     const deps = makeDeps(pool);
